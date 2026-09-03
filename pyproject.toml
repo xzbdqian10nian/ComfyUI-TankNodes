@@ -1,6 +1,6 @@
 [project]
 name = "qwen38-vl"
-version = "0.5.0"
+version = "0.5.1"
 description = "Qwen3.8 VL local GGUF inference and OpenAI-compatible image/video API nodes for ComfyUI"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"

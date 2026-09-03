@@ -514,20 +514,20 @@ class _VisionAPINodeBase:
             )
         required.update(
             {
-                "prompt": (
-                    "STRING",
-                    {
-                        "default": "",
-                        "multiline": True,
-                        "tooltip": "User instruction sent to the API, together with any attached image or video input.",
-                    },
-                ),
                 "system_prompt": (
                     "STRING",
                     {
                         "default": "",
                         "multiline": True,
                         "tooltip": "Optional persona and system-level instruction; leave blank for the provider default.",
+                    },
+                ),
+                "prompt": (
+                    "STRING",
+                    {
+                        "default": "",
+                        "multiline": True,
+                        "tooltip": "User instruction sent to the API, together with any attached image or video input.",
                     },
                 ),
                 "max_tokens": (
@@ -620,8 +620,8 @@ class _VisionAPINodeBase:
         self,
         base_url: str,
         model: str,
-        prompt: str,
         system_prompt: str,
+        prompt: str,
         max_tokens: int,
         temperature: float,
         seed: int = 1,
@@ -720,13 +720,13 @@ class VisionChat:
         return {
             "required": {
                 "backend": ("VISION_LLM_BACKEND", {"tooltip": "Connect the Qwen3.8 VL local loader or any OpenAI-compatible API backend."}),
-                "prompt": (
-                    "STRING",
-                    {"default": "Please describe the input image or video in detail.", "multiline": True, "tooltip": "User instruction sent with the attached image/video content."},
-                ),
                 "system_prompt": (
                     "STRING",
                     {"default": "You are a professional visual-understanding assistant running in ComfyUI. Answer accurately and directly.", "multiline": True, "tooltip": "Persona and system-level behavior or response-format instruction."},
+                ),
+                "prompt": (
+                    "STRING",
+                    {"default": "Please describe the input image or video in detail.", "multiline": True, "tooltip": "User instruction sent with the attached image/video content."},
                 ),
                 "thinking_mode": (["backend_default", "thinking", "instruct"], {"default": "backend_default", "tooltip": "Use the backend default, force reasoning output, or force direct instruct mode. Local Qwen3.8 defaults to direct instruct mode."}),
                 "context_length": (
@@ -784,8 +784,8 @@ class VisionChat:
     def generate(
         self,
         backend: Any,
-        prompt: str,
         system_prompt: str,
+        prompt: str,
         thinking_mode: str,
         context_length: int,
         max_tokens: int,

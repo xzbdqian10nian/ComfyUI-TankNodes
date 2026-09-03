@@ -55,13 +55,13 @@
         "name": "密钥环境变量",
         "tooltip": "保存 API 密钥的环境变量名称；请求主机必须在管理员允许列表中。"
       },
-      "prompt": {
-        "name": "用户输入",
-        "tooltip": "发送给 API 的用户指令，可同时附带图片或视频输入。"
-      },
       "system_prompt": {
         "name": "人设 / 系统提示词",
         "tooltip": "可选的人设和系统级指令；留空则使用服务商默认行为。"
+      },
+      "prompt": {
+        "name": "用户输入",
+        "tooltip": "发送给 API 的用户指令，可同时附带图片或视频输入。"
       },
       "max_tokens": {
         "name": "最大输出 token 数",
@@ -127,13 +127,13 @@
         "name": "API 密钥",
         "tooltip": "本次请求使用的 API 密钥；不读取环境变量。"
       },
-      "prompt": {
-        "name": "用户输入",
-        "tooltip": "发送给 API 的用户指令，可同时附带图片或视频输入。"
-      },
       "system_prompt": {
         "name": "人设 / 系统提示词",
         "tooltip": "可选的人设和系统级指令；留空则使用服务商默认行为。"
+      },
+      "prompt": {
+        "name": "用户输入",
+        "tooltip": "发送给 API 的用户指令，可同时附带图片或视频输入。"
       },
       "max_tokens": {
         "name": "最大输出 token 数",
@@ -191,13 +191,13 @@
         "name": "后端",
         "tooltip": "连接 Qwen3.8 VL 本地加载器或任意 OpenAI 兼容 API 后端。"
       },
-      "prompt": {
-        "name": "用户输入",
-        "tooltip": "与图片或视频内容一起发送给模型的用户指令。"
-      },
       "system_prompt": {
         "name": "人设 / 系统提示词",
         "tooltip": "控制模型角色、回答方式和输出格式的人设及系统级指令。"
+      },
+      "prompt": {
+        "name": "用户输入",
+        "tooltip": "与图片或视频内容一起发送给模型的用户指令。"
       },
       "thinking_mode": {
         "name": "思考模式",

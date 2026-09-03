@@ -55,13 +55,13 @@
         "name": "API key environment variable",
         "tooltip": "Environment variable containing the API key. The request host must be administrator-allow-listed."
       },
-      "prompt": {
-        "name": "user prompt",
-        "tooltip": "User instruction sent to the API, together with any attached image or video input."
-      },
       "system_prompt": {
         "name": "persona / system prompt",
         "tooltip": "Optional persona and system-level instruction; leave blank to use the provider default."
+      },
+      "prompt": {
+        "name": "user prompt",
+        "tooltip": "User instruction sent to the API, together with any attached image or video input."
       },
       "max_tokens": {
         "name": "max output tokens",
@@ -127,13 +127,13 @@
         "name": "API key",
         "tooltip": "API key used for this request; environment variables are not read."
       },
-      "prompt": {
-        "name": "user prompt",
-        "tooltip": "User instruction sent to the API, together with any attached image or video input."
-      },
       "system_prompt": {
         "name": "persona / system prompt",
         "tooltip": "Optional persona and system-level instruction; leave blank to use the provider default."
+      },
+      "prompt": {
+        "name": "user prompt",
+        "tooltip": "User instruction sent to the API, together with any attached image or video input."
       },
       "max_tokens": {
         "name": "max output tokens",
@@ -191,13 +191,13 @@
         "name": "backend",
         "tooltip": "Connect the Qwen3.8 VL local loader or any OpenAI-compatible API backend."
       },
-      "prompt": {
-        "name": "user prompt",
-        "tooltip": "User instruction sent with the attached image or video content."
-      },
       "system_prompt": {
         "name": "persona / system prompt",
         "tooltip": "Persona and system-level behavior or response-format instruction."
+      },
+      "prompt": {
+        "name": "user prompt",
+        "tooltip": "User instruction sent with the attached image or video content."
       },
       "thinking_mode": {
         "name": "thinking mode",
