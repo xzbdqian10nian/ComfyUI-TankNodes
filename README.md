@@ -62,6 +62,22 @@ The main model contains the language-model weights. The `mmproj` file is the vis
 
 For a 32 GB card, start with `Q4_K_M` or an equivalent UD Q4 variant. Q6/Q8 variants need more VRAM. The loader exposes context length, batch size, micro-batch size, GPU layers, and ComfyUI VRAM cleanup; these settings are intentionally kept in the loader/chat nodes rather than hidden in a platform-specific launcher.
 
+### Reasoning effort
+
+`Vision LLM Chat` and both API nodes expose one unified selector:
+
+- `auto`: keep the previous/provider-default behavior;
+- `off`: request a direct non-thinking response;
+- `low`, `medium`, `high`, `xhigh`, `max`: the five active reasoning-effort tiers commonly used by current APIs.
+
+The selected and effective values are included in the node statistics. The
+five-tier UI is shared across backends, but a model may support only a subset.
+[Qwen3.8-27B officially supports](https://huggingface.co/Qwen/Qwen3.8-27B)
+`low`, `medium`, and `xhigh`; for local Qwen3.8 inference this plugin safely
+maps `high` to `medium` and `max` to `xhigh` instead of sending a value that
+the model template rejects. Changing local reasoning effort updates the chat
+template without reloading model weights.
+
 ### Model downloads
 
 These are community GGUF distributions of Qwen3.8-27B. Download only the files you need.
@@ -110,6 +126,7 @@ Use `OpenAI-Compatible API · Direct Key` when a temporary key is more convenien
 - `max_tokens = 0`: omit `max_tokens` and use the provider default.
 - `temperature = 0`: omit `temperature` and use the provider default.
 - `seed`: pass a seed when the provider supports it.
+- `reasoning effort`: choose `auto`, `off`, or one of the five unified active tiers; the provider may map or reject tiers it does not support.
 - API progress is conservative when the provider does not expose a total output limit; it advances gradually and completes at the end of a normal response.
 
 ### Environment-key endpoint security

@@ -23,6 +23,13 @@ from urllib.parse import urlsplit
 
 import torch
 
+from .reasoning import (
+    effective_reasoning_effort,
+    is_qwen38_model,
+    normalize_reasoning_choice,
+    resolve_qwen38_effort,
+)
+
 
 def _free_comfy_vram() -> None:
     """Release ComfyUI models before loading a large local VLM."""
@@ -147,7 +154,9 @@ class LocalQwen38Backend:
     def __init__(self, settings: LocalRuntimeSettings):
         self.settings = settings
         self.n_ctx = 8192
+        self.thinking_mode = "auto"
         self.thinking = False
+        self.reasoning_effort = None
         self.llm = None
         self.chat_handler = None
         self._lock = threading.RLock()
@@ -156,20 +165,39 @@ class LocalQwen38Backend:
     def configure_chat(self, context_length: int, thinking_mode: str) -> None:
         """Apply chat-owned settings before lazy model loading.
 
-        llama.cpp allocates its KV cache and Qwen vision handler while loading,
-        so changing either value after a model is resident requires a reload.
+        llama.cpp allocates its KV cache while loading, so a context change
+        requires a reload. Reasoning effort is a template setting and can be
+        updated without reloading model weights.
         """
         n_ctx = max(2048, int(context_length))
-        thinking = thinking_mode == "thinking"
+        choice, enabled, effort = resolve_qwen38_effort(thinking_mode)
+        # Preserve the plugin's previous local default: old workflows using
+        # backend_default/auto remain non-thinking until the user picks a tier.
+        thinking = bool(enabled) if enabled is not None else False
         with self._lock:
-            if self.llm is not None and (self.n_ctx != n_ctx or self.thinking != thinking):
+            if self.llm is not None and self.n_ctx != n_ctx:
                 print(
-                    "[ComfyUI-Qwen3.8-VL] Chat context/mode changed; "
+                    "[ComfyUI-Qwen3.8-VL] Chat context changed; "
                     "reloading the local model"
                 )
                 self.unload()
             self.n_ctx = n_ctx
+            self.thinking_mode = choice
             self.thinking = thinking
+            self.reasoning_effort = effort
+            # Reasoning is a chat-template setting, so changing it does not
+            # need to reload model weights. Update an existing handler in
+            # place for fast switching between effort levels.
+            handler = self.chat_handler
+            if handler is not None:
+                handler.enable_thinking = thinking
+                arguments = getattr(handler, "extra_template_arguments", None)
+                if isinstance(arguments, dict):
+                    arguments["enable_thinking"] = thinking
+                    if effort is None:
+                        arguments.pop("reasoning_effort", None)
+                    else:
+                        arguments["reasoning_effort"] = effort
 
     def _claim_active_slot(self) -> None:
         """Unload another local VLM before this one allocates GPU memory."""
@@ -192,7 +220,7 @@ class LocalQwen38Backend:
                 "The installed llama-cpp-python does not provide Qwen35ChatHandler; the local vision model cannot be loaded."
             ) from exc
 
-        handler = Qwen35ChatHandler(
+        handler_kwargs = dict(
             mmproj_path=str(self.settings.mmproj_path),
             enable_thinking=self.thinking,
             preserve_thinking=False,
@@ -203,6 +231,28 @@ class LocalQwen38Backend:
             use_gpu=self.settings.n_gpu_layers != 0,
             verbose=False,
         )
+        if self.reasoning_effort is not None:
+            handler_kwargs["extra_template_arguments"] = {
+                "reasoning_effort": self.reasoning_effort,
+            }
+        try:
+            handler = Qwen35ChatHandler(**handler_kwargs)
+        except TypeError as exc:
+            # Older compatible wheels may not expose extra template
+            # arguments. Keep on/off thinking functional instead of making
+            # the entire local model unloadable.
+            if (
+                "extra_template_arguments" not in handler_kwargs
+                or "extra_template_arguments" not in str(exc)
+            ):
+                raise
+            handler_kwargs.pop("extra_template_arguments", None)
+            print(
+                "[ComfyUI-Qwen3.8-VL] This llama-cpp-python build does not "
+                f"accept reasoning effort; using thinking on/off only: {exc}",
+                flush=True,
+            )
+            handler = Qwen35ChatHandler(**handler_kwargs)
         # llama-cpp-python's current MTMD formatter builds its own
         # sandboxed Jinja environment but, unlike Jinja2ChatFormatter, some
         # releases omit the standard Hugging Face template helpers. Qwen3.8's
@@ -327,13 +377,19 @@ class LocalQwen38Backend:
             return self.llm.create_chat_completion(**kwargs)
 
     def info(self) -> str:
+        reasoning = self.reasoning_info()
         return (
             f"backend=local_llama_cpp\nmodel={self.settings.model_path.name}\n"
             f"mmproj={self.settings.mmproj_path.name}\n"
             f"gpu_layers={self.settings.n_gpu_layers}\n"
+            f"{reasoning}\n"
             f"state={'loaded' if self.llm is not None else 'prepared'}\n"
             f"load_seconds={self.load_seconds:.1f}"
         )
+
+    def reasoning_info(self) -> str:
+        effective = self.reasoning_effort or ("off" if not self.thinking else "on")
+        return f"reasoning_choice={self.thinking_mode}\nreasoning_effective={effective}"
 
     def unload(self) -> None:
         global _ACTIVE_LOCAL_BACKEND
@@ -416,6 +472,8 @@ class OpenAICompatibleBackend:
         self.extra_body = _parse_json_object(extra_body_json, "extra_body_json")
         self.client = None
         self._lock = threading.RLock()
+        self.last_reasoning_choice = "auto"
+        self.last_reasoning_effort = None
 
         if not self.base_url:
             raise BackendError("API base URL cannot be empty.")
@@ -446,6 +504,51 @@ class OpenAICompatibleBackend:
         self.client = OpenAI(**kwargs)
         return self.client
 
+    def _apply_reasoning(self, extra_body: dict[str, Any], value: str | None) -> None:
+        """Translate the unified selector to common Chat Completions shapes."""
+        choice = normalize_reasoning_choice(value)
+        self.last_reasoning_choice = choice
+        self.last_reasoning_effort = None
+        if choice == "auto":
+            return
+
+        host = (urlsplit(self.base_url).hostname or "").lower()
+        if host == "openrouter.ai" or host.endswith(".openrouter.ai"):
+            if choice == "off":
+                extra_body.setdefault("reasoning", {"enabled": False})
+            else:
+                extra_body.setdefault("reasoning", {"effort": choice})
+                self.last_reasoning_effort = choice
+            return
+
+        if is_qwen38_model(self.model):
+            effort = effective_reasoning_effort(choice, self.model)
+            qwen_cloud = (
+                host == "qwencloud.com"
+                or host.endswith(".qwencloud.com")
+                or host == "dashscope.aliyuncs.com"
+                or host.endswith(".dashscope.aliyuncs.com")
+            )
+            if qwen_cloud:
+                extra_body.setdefault("enable_thinking", choice != "off")
+            else:
+                template_kwargs = extra_body.get("chat_template_kwargs")
+                if not isinstance(template_kwargs, dict):
+                    template_kwargs = {}
+                    extra_body["chat_template_kwargs"] = template_kwargs
+                template_kwargs.setdefault("enable_thinking", choice != "off")
+            if effort is not None:
+                extra_body.setdefault("reasoning_effort", effort)
+                self.last_reasoning_effort = effort
+            return
+
+        # Flat reasoning_effort is the most common Chat Completions shape for
+        # OpenAI, DeepSeek, GLM and compatible gateways. Keep it in extra_body
+        # so older OpenAI Python SDK versions still pass it through.
+        wire_effort = "none" if choice == "off" else choice
+        extra_body.setdefault("reasoning_effort", wire_effort)
+        self.last_reasoning_effort = wire_effort
+
     def complete(self, **kwargs):
         with self._lock:
             request: dict[str, Any] = {
@@ -472,13 +575,7 @@ class OpenAICompatibleBackend:
             if tools:
                 request["tools"] = tools
             extra_body = dict(self.extra_body)
-            thinking_mode = kwargs.get("thinking_mode", "backend_default")
-            if thinking_mode in {"thinking", "instruct"}:
-                # This is understood by common vLLM/SGLang/Qwen-compatible
-                # servers.  It is sent as an extra body field only when the
-                # user explicitly chooses a mode, so normal OpenAI requests
-                # remain strictly standard.
-                extra_body.setdefault("enable_thinking", thinking_mode == "thinking")
+            self._apply_reasoning(extra_body, kwargs.get("thinking_mode", "auto"))
 
             if extra_body:
                 request["extra_body"] = extra_body
@@ -530,7 +627,17 @@ class OpenAICompatibleBackend:
         key_source = "direct" if self.api_key else (self.api_key_env or "none")
         return (
             f"backend=openai_compatible\nbase_url={self.base_url}\n"
-            f"model={self.model}\ntimeout={self.timeout:.1f}s\nkey_source={key_source}"
+            f"model={self.model}\ntimeout={self.timeout:.1f}s\nkey_source={key_source}\n"
+            f"{self.reasoning_info()}"
+        )
+
+    def reasoning_info(self) -> str:
+        effective = self.last_reasoning_effort or (
+            "provider_default" if self.last_reasoning_choice == "auto" else "off"
+        )
+        return (
+            f"reasoning_choice={self.last_reasoning_choice}\n"
+            f"reasoning_effective={effective}"
         )
 
     def unload(self) -> None:

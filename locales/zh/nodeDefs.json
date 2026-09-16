@@ -75,6 +75,10 @@
         "name": "随机种子",
         "tooltip": "服务商支持时发送的采样种子；服务商也可能忽略它。"
       },
+      "thinking_mode": {
+        "name": "思考强度",
+        "tooltip": "思考控制：auto 不修改服务商默认行为；off 在后端支持时关闭思考；low、medium、high、xhigh、max 是统一的五档思考强度。服务商可能拒绝或映射不支持的档位。"
+      },
       "max_video_frames": {
         "name": "最多视频帧数",
         "tooltip": "VIDEO 转为视频帧时均匀抽取的最大帧数；不会限制 IMAGE 批次。"
@@ -147,6 +151,10 @@
         "name": "随机种子",
         "tooltip": "服务商支持时发送的采样种子；服务商也可能忽略它。"
       },
+      "thinking_mode": {
+        "name": "思考强度",
+        "tooltip": "思考控制：auto 不修改服务商默认行为；off 在后端支持时关闭思考；low、medium、high、xhigh、max 是统一的五档思考强度。服务商可能拒绝或映射不支持的档位。"
+      },
       "max_video_frames": {
         "name": "最多视频帧数",
         "tooltip": "VIDEO 转为视频帧时均匀抽取的最大帧数；不会限制 IMAGE 批次。"
@@ -200,8 +208,8 @@
         "tooltip": "与图片或视频内容一起发送给模型的用户指令。"
       },
       "thinking_mode": {
-        "name": "思考模式",
-        "tooltip": "使用后端默认设置，或强制开启思考输出 / 直接指令模式。本地 Qwen3.8 默认使用直接指令模式。"
+        "name": "思考强度",
+        "tooltip": "思考控制：auto 保留旧版/后端默认行为；off 关闭思考；low、medium、high、xhigh、max 是统一的五档思考强度。本地 Qwen3.8 原生仅支持 low、medium、xhigh，因此 high 映射为 medium，max 映射为 xhigh。"
       },
       "context_length": {
         "name": "上下文长度",

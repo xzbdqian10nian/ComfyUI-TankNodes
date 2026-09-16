@@ -75,6 +75,10 @@
         "name": "seed",
         "tooltip": "Seed sent for sampling when the provider supports it; providers may ignore it."
       },
+      "thinking_mode": {
+        "name": "reasoning effort",
+        "tooltip": "Reasoning control: auto leaves the provider unchanged; off disables reasoning when supported; low, medium, high, xhigh, and max are the five unified effort tiers. A provider may reject or map unsupported tiers."
+      },
       "max_video_frames": {
         "name": "max video frames",
         "tooltip": "Maximum number of evenly sampled frames used when a VIDEO input is converted to frames. It does not limit an IMAGE batch."
@@ -147,6 +151,10 @@
         "name": "seed",
         "tooltip": "Seed sent for sampling when the provider supports it; providers may ignore it."
       },
+      "thinking_mode": {
+        "name": "reasoning effort",
+        "tooltip": "Reasoning control: auto leaves the provider unchanged; off disables reasoning when supported; low, medium, high, xhigh, and max are the five unified effort tiers. A provider may reject or map unsupported tiers."
+      },
       "max_video_frames": {
         "name": "max video frames",
         "tooltip": "Maximum number of evenly sampled frames used when a VIDEO input is converted to frames. It does not limit an IMAGE batch."
@@ -200,8 +208,8 @@
         "tooltip": "User instruction sent with the attached image or video content."
       },
       "thinking_mode": {
-        "name": "thinking mode",
-        "tooltip": "Use the backend default, force reasoning output, or force direct instruct mode. Local Qwen3.8 defaults to direct instruct mode."
+        "name": "reasoning effort",
+        "tooltip": "Reasoning control: auto preserves the previous/default behavior; off disables thinking; low, medium, high, xhigh, and max are the five unified effort tiers. Local Qwen3.8 natively supports low, medium, and xhigh, so high maps to medium and max maps to xhigh."
       },
       "context_length": {
         "name": "context length",

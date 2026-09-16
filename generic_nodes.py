@@ -25,6 +25,7 @@ from .media import (
 )
 from .nodes import _choices, _resolve_file
 from .progress import ConsoleProgressBar, StatusTicker, make_progress, send_status, update_progress
+from .reasoning import REASONING_CHOICES
 
 
 API_AUTO_PROGRESS_CHUNKS_PER_PERCENT = 2000
@@ -362,6 +363,11 @@ def _run_chat(
         f"images={image_count}\nvideo_frames={video_frame_count}\n"
         f"backend={getattr(backend, 'backend_kind', type(backend).__name__)}"
     )
+    reasoning_info = getattr(backend, "reasoning_info", None)
+    if callable(reasoning_info):
+        detail = str(reasoning_info()).strip()
+        if detail:
+            stats = f"{stats}\n{detail}"
     return response, reasoning, raw, stats
 
 
@@ -560,6 +566,13 @@ class _VisionAPINodeBase:
                         "tooltip": "Seed sent for sampling when the provider supports it; providers may ignore it.",
                     },
                 ),
+                "thinking_mode": (
+                    list(REASONING_CHOICES),
+                    {
+                        "default": "auto",
+                        "tooltip": "Reasoning control: auto leaves the provider unchanged, off disables reasoning when supported, and low/medium/high/xhigh/max are the five unified effort tiers. Unsupported tiers may be rejected or mapped by the provider.",
+                    },
+                ),
             }
         )
         return {
@@ -625,6 +638,7 @@ class _VisionAPINodeBase:
         max_tokens: int,
         temperature: float,
         seed: int = 1,
+        thinking_mode: str = "auto",
         api_key_env: str = "",
         api_key: str = "",
         image: torch.Tensor | None = None,
@@ -677,7 +691,7 @@ class _VisionAPINodeBase:
                 int(seed),
                 max(1, int(max_video_frames)),
                 video_transport,
-                "backend_default",
+                thinking_mode,
                 image,
                 video_frames,
                 video,
@@ -728,7 +742,7 @@ class VisionChat:
                     "STRING",
                     {"default": "Please describe the input image or video in detail.", "multiline": True, "tooltip": "User instruction sent with the attached image/video content."},
                 ),
-                "thinking_mode": (["backend_default", "thinking", "instruct"], {"default": "backend_default", "tooltip": "Use the backend default, force reasoning output, or force direct instruct mode. Local Qwen3.8 defaults to direct instruct mode."}),
+                "thinking_mode": (list(REASONING_CHOICES), {"default": "auto", "tooltip": "Reasoning control: auto preserves the old/default behavior, off disables thinking, and low/medium/high/xhigh/max are the five unified effort tiers. Local Qwen3.8 natively supports low/medium/xhigh, so high maps to medium and max maps to xhigh."}),
                 "context_length": (
                     "INT",
                     {

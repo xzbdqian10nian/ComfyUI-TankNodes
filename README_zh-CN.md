@@ -62,6 +62,20 @@ ComfyUI/models/LLM/Qwen3.8/
 
 32GB 显存建议从 `Q4_K_M` 或同等级的 UD Q4 版本开始。Q6/Q8 版本需要更多显存。上下文长度、batch size、micro-batch size、GPU layers 和 ComfyUI 显存清理都在节点中配置，不依赖特定平台的启动脚本。
 
+### 思考强度
+
+`Vision LLM · 对话` 和两个 API 节点共用一套选择：
+
+- `auto`：保留旧版/服务商默认行为；
+- `off`：请求不思考的直接回答；
+- `low`、`medium`、`high`、`xhigh`、`max`：当前 API 常用的统一五档思考强度。
+
+节点运行统计会显示选择档位和实际生效档位。五档界面在各后端之间通用，
+但具体模型可能只支持其中一部分。[Qwen3.8-27B 官方支持](https://huggingface.co/Qwen/Qwen3.8-27B)
+`low`、`medium`、`xhigh`；本地 Qwen3.8 会安全地把 `high` 映射为 `medium`、把 `max`
+映射为 `xhigh`，避免模板因不支持的值报错。切换本地思考强度只更新对话模板，
+不会重新加载模型权重。
+
 ### 模型下载
 
 以下是 Qwen3.8-27B 的社区 GGUF 发布版本，请按需下载。
@@ -109,6 +123,7 @@ export OPENAI_API_KEY='your-api-key'
 - `max_tokens = 0`：不发送 `max_tokens`，使用服务商默认值；
 - `temperature = 0`：不发送 `temperature`，使用服务商默认值；
 - `seed`：服务商支持时发送随机种子；
+- `思考强度`：可选 `auto`、`off` 或统一五档思考强度；服务商可能会映射或拒绝其不支持的档位；
 - 服务商没有提供输出总量时，API 进度条会保守推进，并在正常响应结束后完成。
 
 ### 环境变量 Key 的地址安全限制
