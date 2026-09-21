@@ -1,7 +1,7 @@
 {
   "Qwen38VLLoader": {
     "display_name": "Qwen3.8 Model Loader · Tank",
-    "description": "Select a local Qwen3.8 GGUF and matching vision projector. Weights load when Local Multimodal Chat · Tank runs.",
+    "description": "Choose a main model and vision projector, then connect to local chat. Weights load when chat starts.",
     "inputs": {
       "model_file": {
         "name": "model file (GGUF)",
@@ -41,7 +41,7 @@
   },
   "VisionAPIEnv": {
     "display_name": "API Chat (Environment Key) · Tank",
-    "description": "Sends one text, image, image-batch, video-frame, or VIDEO request using an API key from an environment variable.",
+    "description": "Call an API with a key stored in a server environment variable. Images and video are optional.",
     "inputs": {
       "base_url": {
         "name": "base URL",
@@ -125,7 +125,7 @@
   },
   "VisionAPIDirect": {
     "display_name": "API Chat (Direct Key) · Tank",
-    "description": "Sends one text, image, image-batch, video-frame, or VIDEO request using a key entered in the node.",
+    "description": "Call an API with a key entered here. Images and video are optional. Clear the key before sharing the workflow.",
     "inputs": {
       "base_url": {
         "name": "base URL",
@@ -209,7 +209,7 @@
   },
   "VisionChat": {
     "display_name": "Local Multimodal Chat · Tank",
-    "description": "One local text, image, image-batch or video request. Conversation history is not stored between runs.",
+    "description": "Ask a local model about text, images or video. Each run is a separate request with no saved conversation.",
     "inputs": {
       "backend": {
         "name": "model configuration",
@@ -309,7 +309,7 @@
   },
   "VisionUnload": {
     "display_name": "Unload Model · Tank",
-    "description": "Release a local model. Connect the chat response to after to run after generation, or enable unload after on the chat node.",
+    "description": "Connect the chat response to after to release the model when generation finishes. You can also enable unload after in the chat node.",
     "inputs": {
       "backend": {
         "name": "model configuration",

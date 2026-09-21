@@ -41,7 +41,7 @@
         "cnr_id": "comfy-core"
       },
       "widgets_values": [
-        "## API 对话 / API chat\n填写接口地址与模型 ID，再配置密钥来源。API 节点直接输出结果，不接本地加载器。\nSet the base URL, exact model ID and key source. This node returns text directly.\n分享前清空真实密钥。 / Clear real keys before sharing."
+        "## API 对话 / API chat\n填写接口地址、模型 ID 和 API Key。Key 会保存在工作流中，分享前请清空。\nEnter the base URL, model ID and API key. The key is saved in the workflow; clear it before sharing."
       ],
       "color": "#243447",
       "bgcolor": "#31465c"

@@ -9,7 +9,7 @@
       "repo": "unsloth/Qwen3.8-27B-GGUF",
       "model": "Qwen3.8-27B-UD-Q4_K_M.gguf",
       "mmproj": "mmproj-BF16.gguf",
-      "profile": "Default recommendation; Dynamic 3.0 quantization with the original Qwen alignment."
+      "profile": "Unsloth UD quantization; use mmproj-BF16.gguf from the same release."
     },
     {
       "name": "Qwen3.8 27B · Huihui Abliterated · Q4_K / Q4_K_L",
@@ -17,15 +17,15 @@
       "model": "Huihui-Qwen3.8-27B-abliterated-Q4_K.gguf",
       "alternative_model": "Huihui-Qwen3.8-27B-abliterated-Q4_K_L.gguf",
       "mmproj": "mmproj-model-bf16.gguf",
-      "profile": "Reduced-refusal community variant; Q4_K_L retains selected tensors at higher precision."
+      "profile": "Huihui Abliterated GGUF; use mmproj-model-bf16.gguf from the same release."
     },
     {
       "name": "Qwen3.8 27B · Orcarouter Uncensored · Q4_K_M",
       "repo": "orcarouter/Qwen3.8-27B-Uncensored-GGUF",
       "model": "Qwen3.8-27B-Uncensored-Q4_K_M.gguf",
       "mmproj": "mmproj-Qwen3.8-27B-Uncensored-f16.gguf",
-      "profile": "Reduced-refusal community variant; Hugging Face access approval may be required."
+      "profile": "Orcarouter Uncensored GGUF; use this release’s mmproj-Qwen3.8-27B-Uncensored-f16.gguf."
     }
   ],
-  "notes": "The directory is resolved from ComfyUI's models directory. Q4_K_M is the recommended starting point for 32 GB VRAM; requirements vary by context and offload settings."
+  "notes": "Files are read from ComfyUI/models/LLM/Qwen3.8 or QWEN38_MODEL_DIR. The tested pair is Unsloth UD-Q4_K_M with mmproj-BF16."
 }

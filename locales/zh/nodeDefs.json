@@ -1,7 +1,7 @@
 {
   "Qwen38VLLoader": {
     "display_name": "Qwen3.8 模型加载 · Tank",
-    "description": "选择 Qwen3.8 GGUF 主模型和匹配的视觉投影文件，连接本地多模态对话；运行对话时才加载权重。",
+    "description": "选好主模型和视觉投影，再接到本地对话节点。模型会在对话开始时加载。",
     "inputs": {
       "model_file": {
         "name": "主模型文件（GGUF）",
@@ -41,7 +41,7 @@
   },
   "VisionAPIEnv": {
     "display_name": "API 对话（环境变量密钥）· Tank",
-    "description": "使用环境变量中的 API 密钥发送一次文本、单图、多图、视频帧或 VIDEO 请求。",
+    "description": "使用服务器环境变量里的 API Key 调用模型，可以接入图片或视频。",
     "inputs": {
       "base_url": {
         "name": "接口基础地址",
@@ -125,7 +125,7 @@
   },
   "VisionAPIDirect": {
     "display_name": "API 对话（直接密钥）· Tank",
-    "description": "使用节点中填写的 API 密钥发送一次文本、单图、多图、视频帧或 VIDEO 请求。",
+    "description": "填入 API Key 后直接调用模型，可以接入图片或视频。分享工作流前记得清空 Key。",
     "inputs": {
       "base_url": {
         "name": "接口基础地址",
@@ -209,7 +209,7 @@
   },
   "VisionChat": {
     "display_name": "本地多模态对话 · Tank",
-    "description": "使用本地模型完成一次文字、图片、多图或视频对话；不会在运行之间自动保留聊天历史。",
+    "description": "用本地模型处理文字、图片或视频，输出回答。每次运行独立，不保留聊天记录。",
     "inputs": {
       "backend": {
         "name": "模型配置",
@@ -309,7 +309,7 @@
   },
   "VisionUnload": {
     "display_name": "模型释放 · Tank",
-    "description": "释放本地模型；把对话回答接入“等待完成”以确保生成后再释放。也可直接开启对话节点的“生成后卸载”。",
+    "description": "把对话的回答接到“等待完成”，生成结束后释放模型。也可以直接开启对话节点的“生成后卸载”。",
     "inputs": {
       "backend": {
         "name": "模型配置",

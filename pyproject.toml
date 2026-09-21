@@ -1,7 +1,7 @@
 [project]
 name = "qwen38-vl"
-version = "0.7.0"
-description = "TankNodes: local Qwen3.8 multimodal models and OpenAI-compatible API tools for ComfyUI"
+version = "0.7.1"
+description = "TankNodes: local image and video understanding, plus API chat for ComfyUI"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
 dependencies = ["diskcache>=5.6.2,<6"]
@@ -12,9 +12,9 @@ classifiers = [
 ]
 
 [project.urls]
-Repository = "https://github.com/xzbdqian10nian/ComfyUI-Qwen3.8-VL"
-Documentation = "https://github.com/xzbdqian10nian/ComfyUI-Qwen3.8-VL#quick-start"
-"Bug Tracker" = "https://github.com/xzbdqian10nian/ComfyUI-Qwen3.8-VL/issues"
+Repository = "https://github.com/xzbdqian10nian/ComfyUI-TankNodes"
+Documentation = "https://github.com/xzbdqian10nian/ComfyUI-TankNodes#quick-start"
+"Bug Tracker" = "https://github.com/xzbdqian10nian/ComfyUI-TankNodes/issues"
 
 [tool.comfy]
 PublisherId = "xzbd10"

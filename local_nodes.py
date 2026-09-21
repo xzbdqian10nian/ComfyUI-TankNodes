@@ -19,7 +19,7 @@ class Qwen38VLLoader:
         "Resolved model, projector, GPU layers, and backend state.",
     )
     CATEGORY = "TankNodes/Local"
-    DESCRIPTION = "Select a local Qwen3.8 GGUF and matching vision projector. Connect to Local Multimodal Chat · Tank; weights load when chat runs."
+    DESCRIPTION = "Choose a main model and vision projector, then connect to local chat. Weights load when chat starts."
     FUNCTION = "load_model"
 
     @classmethod
@@ -183,7 +183,7 @@ class VisionChat:
     )
     FUNCTION = "generate"
     CATEGORY = "TankNodes/Local"
-    DESCRIPTION = "One local text, image, image-batch or video request. Connect the model loader; no conversation history is stored between runs."
+    DESCRIPTION = "Ask a local model about text, images or video. Each run is a separate request with no saved conversation."
     OUTPUT_NODE = True
 
     def generate(
@@ -320,7 +320,7 @@ class VisionUnload:
     OUTPUT_TOOLTIPS = ("Human-readable unload result.",)
     FUNCTION = "unload"
     CATEGORY = "TankNodes/Local"
-    DESCRIPTION = "Release a local model. Connect the chat response to after to establish execution order."
+    DESCRIPTION = "Connect the chat response to after to release the model when generation finishes. You can also enable unload after in the chat node."
     OUTPUT_NODE = True
 
     def unload(self, backend: Any, after: str | None = None):

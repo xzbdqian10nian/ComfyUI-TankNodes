@@ -41,7 +41,7 @@
         "cnr_id": "comfy-core"
       },
       "widgets_values": [
-        "## API 对话 / API chat\n填写接口地址与模型 ID，再配置密钥来源。API 节点直接输出结果，不接本地加载器。\nSet the base URL, exact model ID and key source. This node returns text directly.\n分享前清空真实密钥。 / Clear real keys before sharing."
+        "## API 对话 / API chat\n先在启动 ComfyUI 的环境里设置 OPENAI_API_KEY，再填写接口地址和模型 ID。\nSet OPENAI_API_KEY before starting ComfyUI, then enter the base URL and model ID."
       ],
       "color": "#243447",
       "bgcolor": "#31465c"

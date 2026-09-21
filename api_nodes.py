@@ -183,7 +183,7 @@ class _VisionAPINodeBase:
     )
     FUNCTION = "request"
     CATEGORY = "TankNodes/API"
-    DESCRIPTION = "Sends one simple text, image, image-batch, video-frame, or VIDEO request to an OpenAI-compatible API."
+    DESCRIPTION = "Call an OpenAI-compatible API with a prompt and optional images or video."
     OUTPUT_NODE = True
 
     def request(

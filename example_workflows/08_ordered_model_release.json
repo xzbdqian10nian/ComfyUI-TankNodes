@@ -26,7 +26,7 @@
         "cnr_id": "comfy-core"
       },
       "widgets_values": [
-        "## 有顺序的模型释放 / Ordered model release\n对话的回答连接“等待完成”，确保生成结束后再释放；原来的回答预览仍保留。\nConnect the chat response to after so release runs after generation; the response preview is retained."
+        "## 生成后释放模型 / Release after generation\n回答接到“等待完成”，模型就会在这次对话结束后释放。\nConnect the response to after to release the model when this chat finishes."
       ],
       "color": "#243447",
       "bgcolor": "#31465c"
@@ -353,7 +353,7 @@
         "cnr_id": "comfy-core"
       },
       "widgets_values": [
-        "## 模型设置 / Model setup\n\n主模型与视觉投影放在同一模型目录，可使用来源子目录避免同名投影混淆。\nPlace the main model and matching projector under the model directory; source subfolders can separate identically named projectors.\n\n`ComfyUI/models/LLM/Qwen3.8/`\n\n示例预选 Unsloth 主模型与投影；请改为实际安装的配对文件。\nThe example selects the Unsloth pair; choose the matching files actually installed.\n\n- Main model: `Qwen3.8-27B-UD-Q4_K_M.gguf`\n- Projector: `mmproj-BF16.gguf`\n\n模型加载器 → 本地多模态对话 → 文本预览\nModel Loader → Local Multimodal Chat → Preview as Text\n\n运行对话时才加载权重。API 对话直接输出文本，不接此加载器。\nWeights load when chat runs. API Chat returns text directly and does not use this loader.\n"
+        "## 模型文件 / Model files\n\n放进 `ComfyUI/models/LLM/Qwen3.8/`：\n- `Qwen3.8-27B-UD-Q4_K_M.gguf`\n- `mmproj-BF16.gguf`\n\n这是示例使用的 Unsloth 文件。用其他版本时，在加载器里换成配套的主模型和投影。模型会在首次对话时加载。\n\nPlace the Unsloth pair above in the model folder, then select both files in the loader. If you use another release, select its matching model and projector. Weights load on the first chat.\n"
       ],
       "color": "#243447",
       "bgcolor": "#31465c"
