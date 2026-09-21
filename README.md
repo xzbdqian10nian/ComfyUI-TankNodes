@@ -1,6 +1,6 @@
 # TankNodes
 
-English · [简体中文](README_zh-CN.md) · [Downloads](https://github.com/xzbdqian10nian/ComfyUI-TankNodes/releases) · [Changelog](CHANGELOG.md) · [Issues](https://github.com/xzbdqian10nian/ComfyUI-TankNodes/issues)
+English · [简体中文](README_zh-CN.md)
 
 A collection of ComfyUI nodes by Tank. Use a local Qwen3.8 model for text, images and video, or call other models through an OpenAI-compatible API.
 
@@ -76,21 +76,6 @@ For API nodes, **max output tokens = 0** and **temperature = 0** omit those sett
 - For local Qwen3.8, `high` runs as `medium` and `max` as `xhigh`. Stats show the effective setting. Changing reasoning effort keeps the model loaded; changing context length reloads it.
 - Keep the model loaded for repeated chats. Enable **unload after** if you need the GPU memory for another model.
 - Nodes 2.0 can collapse advanced inputs. The classic canvas shows them together.
-
-## Updating an existing installation
-
-Inside your existing plugin folder:
-
-```bash
-git remote set-url origin https://github.com/xzbdqian10nian/ComfyUI-TankNodes.git
-git pull --ff-only
-```
-
-An existing `ComfyUI-Qwen3.8-VL` folder can stay as it is. Do not install a second copy beside it. The old GitHub URL redirects to this repository. Restart ComfyUI and refresh the browser after updating.
-
-Saved node IDs, field names and original output positions are retained. The loader fixes the known older API widget layout and prompt order when the saved metadata identifies it. Custom titles and links stay intact. Check a copy first if a much older workflow has an unknown layout.
-
-`qwen38-vl` remains the Registry package ID. Renaming the GitHub repository does not change it. Qwen3.8 is still the model name.
 
 ## Development
 

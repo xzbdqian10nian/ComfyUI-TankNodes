@@ -1,6 +1,6 @@
 # TankNodes
 
-[English](README.md) · 简体中文 · [下载](https://github.com/xzbdqian10nian/ComfyUI-TankNodes/releases) · [更新记录](CHANGELOG.md) · [反馈问题](https://github.com/xzbdqian10nian/ComfyUI-TankNodes/issues)
+[English](README.md) · 简体中文
 
 Tank 的 ComfyUI 节点合集。现在可以用本地 Qwen3.8 处理文字、图片和视频，也可以通过 API 调用其他模型。
 
@@ -76,21 +76,6 @@ API 的“最大输出 token 数”和“随机度”设为 0 时，不发送这
 - 本地 Qwen3.8 的 `high` 按 `medium` 执行，`max` 按 `xhigh` 执行；运行统计里能看到实际档位。切换思考强度不重新加载权重，修改上下文长度会重新加载。
 - 连续对话可以保留模型；后面还要跑其他模型时，打开“生成后卸载”。
 - Nodes 2.0 可以收起高级参数，经典画布会把参数一起显示。
-
-## 老版本怎么更新
-
-进入已经安装的插件目录，执行：
-
-```bash
-git remote set-url origin https://github.com/xzbdqian10nian/ComfyUI-TankNodes.git
-git pull --ff-only
-```
-
-原来的 `ComfyUI-Qwen3.8-VL` 文件夹可以继续用，不必改名，也不要在旁边再装一份。旧 GitHub 链接会跳转到新仓库。更新后重启 ComfyUI，再刷新浏览器。
-
-旧节点 ID、字段名和原输出位置保留。较早 API 工作流缺少的思考选项，以及能从保存信息确认的旧提示词顺序，会在载入时修正；自定义标题和连线保留。来源不明的更老工作流，建议先在副本上检查参数。
-
-`qwen38-vl` 是沿用的 Registry 包 ID，GitHub 更名不会修改它。Qwen3.8 仍是模型名，不是插件名。
 
 ## 开发
 
