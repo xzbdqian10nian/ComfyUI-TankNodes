@@ -1,6 +1,6 @@
 [project]
 name = "qwen38-vl"
-version = "0.7.1"
+version = "0.7.2"
 description = "TankNodes: local image and video understanding, plus API chat for ComfyUI"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"

@@ -1,6 +1,6 @@
 # Development checks
 
-Use an isolated Python environment with `pytest torch numpy pillow av openai`.
+Use an isolated Python environment with `pytest torch numpy pillow av openai aiohttp`.
 From the plugin directory:
 
 ```bash
@@ -11,8 +11,12 @@ node --test tests/workflow_compat.test.mjs
 The tests compare the five node interfaces against the 0.6.0 contract,
 exercise real MP4/Matroska decoding (file and memory inputs), check cleanup
 and reasoning changes, and call a local HTTP test server through both the
-OpenAI SDK streaming path and the standard-library fallback. Test keys and
+async OpenAI SDK streaming path and the aiohttp fallback. Test keys and
 responses are synthetic. No model weights or paid API calls are used.
+
+Interruption tests stall real HTTP connections before headers and during a
+response, then check that cancellation returns within a second, closes the
+socket, preserves ComfyUI's interrupt exception and leaves no API worker behind.
 
 The JavaScript tests check historical widget migration and preservation of
 custom titles, links and other configure hooks. Separate real ComfyUI browser

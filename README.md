@@ -70,6 +70,8 @@ Environment-key requests require HTTPS except for loopback services. Direct-key 
 
 For API nodes, **max output tokens = 0** and **temperature = 0** omit those settings and use the provider defaults. Local temperature 0 uses deterministic sampling. API outputs are response, usage, stats, reasoning and raw response. Missing reasoning is empty; unavailable usage or throughput is shown as n/a.
 
+Use ComfyUI's interrupt button while waiting for an API response or receiving output. It stops the local request and closes the connection. Whether remote generation and billing stop depends on the provider.
+
 ## Useful settings
 
 - Local `auto` keeps thinking off. `off` explicitly disables it. API `auto` keeps the provider's default.

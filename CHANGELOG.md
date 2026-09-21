@@ -1,5 +1,14 @@
 # TankNodes 更新记录 / Changelog
 
+## 0.7.2 — API 中断 / API interruption
+
+- 两种 API 节点支持 ComfyUI 中断按钮，等待首个响应和接收输出时均可取消。
+- 取消时关闭请求连接，不返回半截结果，也不继续执行后续节点。
+- 未安装 OpenAI SDK 时复用 ComfyUI 的 aiohttp，替代不能及时取消的同步请求。
+- 服务商是否停止生成和计费，取决于对方接口。节点参数、ID 和输出位置不变。
+
+Both API nodes now handle ComfyUI's interrupt button while waiting for a response or receiving output. Cancellation closes the connection and discards partial results. The SDK-free path uses ComfyUI's aiohttp dependency. Remote generation and billing remain provider-dependent. Node inputs, IDs and output positions are unchanged.
+
 ## 0.7.1 — 仓库更名 / Repository rename
 
 - GitHub 仓库统一为 `xzbdqian10nian/ComfyUI-TankNodes`，更新简介、安装、文档与问题反馈链接。

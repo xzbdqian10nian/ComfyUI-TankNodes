@@ -7,6 +7,7 @@ from typing import Any
 import torch
 
 from .backends import OpenAICompatibleBackend
+from .api_transport import check_interrupted
 from .chat import _run_chat
 from .progress import ConsoleProgressBar, StatusTicker, make_progress, update_progress
 from .reasoning import REASONING_CHOICES, validate_reasoning_choice
@@ -205,6 +206,7 @@ class _VisionAPINodeBase:
         video: Any | None = None,
         unique_id: str | None = None,
     ):
+        check_interrupted()
         backend = OpenAICompatibleBackend(
             base_url=base_url,
             api_key=api_key,
@@ -255,6 +257,7 @@ class _VisionAPINodeBase:
                 tools_json=None,
                 progress_callback=report_token,
             )
+            check_interrupted()
             response, stats = result.response, result.stats
             update_progress(progress, progress_total, progress_total)
             log_progress.finish("response complete")

@@ -13,8 +13,6 @@ import os
 import re
 import threading
 import time
-import urllib.error
-import urllib.request
 import weakref
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,6 +21,7 @@ from urllib.parse import urlsplit
 
 import torch
 
+from .api_transport import APIResponse
 from .reasoning import (
     effective_reasoning_effort,
     is_qwen38_model,
@@ -502,6 +501,7 @@ class OpenAICompatibleBackend:
         self.headers = _parse_json_object(headers_json, "headers_json")
         self.extra_body = _parse_json_object(extra_body_json, "extra_body_json")
         self.client = None
+        self._response = None
         self._lock = threading.RLock()
         self.last_reasoning_choice = "auto"
         self.last_reasoning_effort = None
@@ -515,10 +515,10 @@ class OpenAICompatibleBackend:
         if self.client is not None:
             return self.client
         try:
-            from openai import OpenAI
+            from openai import AsyncOpenAI
         except Exception as exc:
             raise BackendError(
-                "The openai package is unavailable; install it for OpenAI-compatible API support or use the built-in standard-library fallback."
+                "The openai package is unavailable; using ComfyUI's HTTP client."
             ) from exc
 
         # Some local OpenAI-compatible servers do not require a key.  The SDK
@@ -532,7 +532,7 @@ class OpenAICompatibleBackend:
             kwargs["organization"] = self.organization
         if self.headers:
             kwargs["default_headers"] = self.headers
-        self.client = OpenAI(**kwargs)
+        self.client = AsyncOpenAI(**kwargs)
         return self.client
 
     def _apply_reasoning(self, extra_body: dict[str, Any], value: str | None) -> None:
@@ -611,25 +611,44 @@ class OpenAICompatibleBackend:
             if extra_body:
                 request["extra_body"] = extra_body
 
+            self._response = APIResponse(lambda: self._complete_async(request, extra_body))
+            if request["stream"]:
+                return self._response
             try:
-                client = self._ensure_client()
-            except BackendError as exc:
-                if "openai package is unavailable" not in str(exc):
-                    raise
-                # The stdlib fallback deliberately stays non-streaming: a
-                # correct JSON response is preferable to a partial SSE parser
-                # in the dependency-free path.
-                request["stream"] = False
-                return self._complete_with_urllib(request, extra_body)
+                return next(self._response)
+            finally:
+                self._response.close()
 
-            try:
-                return client.chat.completions.create(**request)
-            except Exception as exc:
-                # Do not include the API key in the error text.
-                raise BackendError(f"OpenAI-compatible API request failed: {exc}") from exc
+    async def _complete_async(self, request, extra_body):
+        try:
+            client = self._ensure_client()
+        except BackendError as exc:
+            if "openai package is unavailable" not in str(exc):
+                raise
+            # ComfyUI already depends on aiohttp. Keep the fallback as one JSON
+            # response, but make its connection and body reads cancellable too.
+            request["stream"] = False
+            yield await self._complete_with_aiohttp(request, extra_body)
+            return
 
-    def _complete_with_urllib(self, request: dict[str, Any], extra_body: dict[str, Any]):
-        """Small stdlib fallback for images where the OpenAI SDK is absent."""
+        try:
+            result = await client.chat.completions.create(**request)
+            if request["stream"]:
+                async with result:
+                    async for chunk in result:
+                        yield chunk
+            else:
+                yield result
+        except Exception as exc:
+            raise BackendError(f"OpenAI-compatible API request failed: {exc}") from exc
+        finally:
+            await client.close()
+            self.client = None
+
+    async def _complete_with_aiohttp(self, request: dict[str, Any], extra_body: dict[str, Any]):
+        """Use ComfyUI's async HTTP dependency when the OpenAI SDK is absent."""
+        import aiohttp
+
         body = dict(request)
         body.pop("extra_body", None)
         body.update(extra_body)
@@ -639,18 +658,16 @@ class OpenAICompatibleBackend:
             headers["Authorization"] = f"Bearer {self.api_key}"
         if self.organization:
             headers["OpenAI-Organization"] = self.organization
-        req = urllib.request.Request(
-            endpoint,
-            data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
-            headers=headers,
-            method="POST",
-        )
         try:
-            with urllib.request.urlopen(req, timeout=self.timeout) as response:
-                return json.loads(response.read().decode("utf-8"))
-        except urllib.error.HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace")[:1000]
-            raise BackendError(f"OpenAI-compatible API returned HTTP {exc.code}: {detail}") from exc
+            timeout = aiohttp.ClientTimeout(total=None, sock_connect=self.timeout, sock_read=self.timeout)
+            async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+                async with session.post(endpoint, json=body, headers=headers) as response:
+                    if response.status >= 400:
+                        detail = (await response.content.read(1000)).decode("utf-8", errors="replace")
+                        raise BackendError(f"OpenAI-compatible API returned HTTP {response.status}: {detail}")
+                    return await response.json(content_type=None)
+        except BackendError:
+            raise
         except Exception as exc:
             raise BackendError(f"OpenAI-compatible API request failed: {exc}") from exc
 
@@ -672,9 +689,6 @@ class OpenAICompatibleBackend:
 
     def unload(self) -> None:
         with self._lock:
-            if self.client is not None:
-                try:
-                    self.client.close()
-                except Exception:
-                    pass
-            self.client = None
+            if self._response is not None:
+                self._response.close()
+                self._response = None
