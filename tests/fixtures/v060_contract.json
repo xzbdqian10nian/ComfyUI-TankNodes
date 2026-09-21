@@ -1,0 +1,346 @@
+{
+  "Qwen38VLLoader": {
+    "required": {
+      "model_file": {
+        "type": "COMBO",
+        "default": "Qwen3.8-27B-UD-Q4_K_M.gguf",
+        "control_after_generate": false
+      },
+      "mmproj_file": {
+        "type": "COMBO",
+        "default": "mmproj-BF16.gguf",
+        "control_after_generate": false
+      },
+      "batch_size": {
+        "type": "INT",
+        "default": 1024,
+        "control_after_generate": false
+      },
+      "micro_batch_size": {
+        "type": "INT",
+        "default": 512,
+        "control_after_generate": false
+      },
+      "gpu_layers": {
+        "type": "INT",
+        "default": -1,
+        "control_after_generate": false
+      },
+      "free_comfy_vram": {
+        "type": "BOOLEAN",
+        "default": true,
+        "control_after_generate": false
+      }
+    },
+    "optional": {},
+    "return_types": [
+      "VISION_LLM_BACKEND",
+      "STRING"
+    ],
+    "return_names": [
+      "backend",
+      "backend_info"
+    ]
+  },
+  "VisionAPIEnv": {
+    "required": {
+      "base_url": {
+        "type": "STRING",
+        "default": "https://api.openai.com/v1",
+        "control_after_generate": false
+      },
+      "model": {
+        "type": "STRING",
+        "default": "",
+        "control_after_generate": false
+      },
+      "api_key_env": {
+        "type": "STRING",
+        "default": "OPENAI_API_KEY",
+        "control_after_generate": false
+      },
+      "system_prompt": {
+        "type": "STRING",
+        "default": "",
+        "control_after_generate": false
+      },
+      "prompt": {
+        "type": "STRING",
+        "default": "",
+        "control_after_generate": false
+      },
+      "max_tokens": {
+        "type": "INT",
+        "default": 0,
+        "control_after_generate": false
+      },
+      "temperature": {
+        "type": "FLOAT",
+        "default": 0.0,
+        "control_after_generate": false
+      },
+      "seed": {
+        "type": "INT",
+        "default": 1,
+        "control_after_generate": true
+      },
+      "thinking_mode": {
+        "type": "COMBO",
+        "default": "auto",
+        "control_after_generate": false
+      }
+    },
+    "optional": {
+      "max_video_frames": {
+        "type": "INT",
+        "default": 8,
+        "control_after_generate": false
+      },
+      "video_transport": {
+        "type": "COMBO",
+        "default": "frames",
+        "control_after_generate": false
+      },
+      "image": {
+        "type": "IMAGE",
+        "default": null,
+        "control_after_generate": false
+      },
+      "video_frames": {
+        "type": "IMAGE",
+        "default": null,
+        "control_after_generate": false
+      },
+      "video": {
+        "type": "VIDEO",
+        "default": null,
+        "control_after_generate": false
+      }
+    },
+    "return_types": [
+      "STRING",
+      "STRING",
+      "STRING"
+    ],
+    "return_names": [
+      "response",
+      "usage",
+      "stats"
+    ]
+  },
+  "VisionAPIDirect": {
+    "required": {
+      "base_url": {
+        "type": "STRING",
+        "default": "https://api.openai.com/v1",
+        "control_after_generate": false
+      },
+      "model": {
+        "type": "STRING",
+        "default": "",
+        "control_after_generate": false
+      },
+      "api_key": {
+        "type": "STRING",
+        "default": "",
+        "control_after_generate": false
+      },
+      "system_prompt": {
+        "type": "STRING",
+        "default": "",
+        "control_after_generate": false
+      },
+      "prompt": {
+        "type": "STRING",
+        "default": "",
+        "control_after_generate": false
+      },
+      "max_tokens": {
+        "type": "INT",
+        "default": 0,
+        "control_after_generate": false
+      },
+      "temperature": {
+        "type": "FLOAT",
+        "default": 0.0,
+        "control_after_generate": false
+      },
+      "seed": {
+        "type": "INT",
+        "default": 1,
+        "control_after_generate": true
+      },
+      "thinking_mode": {
+        "type": "COMBO",
+        "default": "auto",
+        "control_after_generate": false
+      }
+    },
+    "optional": {
+      "max_video_frames": {
+        "type": "INT",
+        "default": 8,
+        "control_after_generate": false
+      },
+      "video_transport": {
+        "type": "COMBO",
+        "default": "frames",
+        "control_after_generate": false
+      },
+      "image": {
+        "type": "IMAGE",
+        "default": null,
+        "control_after_generate": false
+      },
+      "video_frames": {
+        "type": "IMAGE",
+        "default": null,
+        "control_after_generate": false
+      },
+      "video": {
+        "type": "VIDEO",
+        "default": null,
+        "control_after_generate": false
+      }
+    },
+    "return_types": [
+      "STRING",
+      "STRING",
+      "STRING"
+    ],
+    "return_names": [
+      "response",
+      "usage",
+      "stats"
+    ]
+  },
+  "VisionChat": {
+    "required": {
+      "backend": {
+        "type": "VISION_LLM_BACKEND",
+        "default": null,
+        "control_after_generate": false
+      },
+      "system_prompt": {
+        "type": "STRING",
+        "default": "You are a professional visual-understanding assistant running in ComfyUI. Answer accurately and directly.",
+        "control_after_generate": false
+      },
+      "prompt": {
+        "type": "STRING",
+        "default": "Please describe the input image or video in detail.",
+        "control_after_generate": false
+      },
+      "thinking_mode": {
+        "type": "COMBO",
+        "default": "auto",
+        "control_after_generate": false
+      },
+      "context_length": {
+        "type": "INT",
+        "default": 8192,
+        "control_after_generate": false
+      },
+      "max_tokens": {
+        "type": "INT",
+        "default": 4096,
+        "control_after_generate": false
+      },
+      "temperature": {
+        "type": "FLOAT",
+        "default": 0.6,
+        "control_after_generate": false
+      },
+      "top_p": {
+        "type": "FLOAT",
+        "default": 0.95,
+        "control_after_generate": false
+      },
+      "top_k": {
+        "type": "INT",
+        "default": 40,
+        "control_after_generate": false
+      },
+      "min_p": {
+        "type": "FLOAT",
+        "default": 0.05,
+        "control_after_generate": false
+      },
+      "repeat_penalty": {
+        "type": "FLOAT",
+        "default": 1.05,
+        "control_after_generate": false
+      },
+      "seed": {
+        "type": "INT",
+        "default": 1,
+        "control_after_generate": true
+      },
+      "max_video_frames": {
+        "type": "INT",
+        "default": 8,
+        "control_after_generate": false
+      },
+      "video_transport": {
+        "type": "COMBO",
+        "default": "auto",
+        "control_after_generate": false
+      },
+      "unload_after": {
+        "type": "BOOLEAN",
+        "default": false,
+        "control_after_generate": false
+      }
+    },
+    "optional": {
+      "image": {
+        "type": "IMAGE",
+        "default": null,
+        "control_after_generate": false
+      },
+      "video_frames": {
+        "type": "IMAGE",
+        "default": null,
+        "control_after_generate": false
+      },
+      "video": {
+        "type": "VIDEO",
+        "default": null,
+        "control_after_generate": false
+      },
+      "tools_json": {
+        "type": "STRING",
+        "default": "",
+        "control_after_generate": false
+      }
+    },
+    "return_types": [
+      "STRING",
+      "STRING",
+      "STRING",
+      "STRING"
+    ],
+    "return_names": [
+      "response",
+      "reasoning",
+      "raw_response",
+      "stats"
+    ]
+  },
+  "VisionUnload": {
+    "required": {
+      "backend": {
+        "type": "VISION_LLM_BACKEND",
+        "default": null,
+        "control_after_generate": false
+      }
+    },
+    "optional": {},
+    "return_types": [
+      "STRING"
+    ],
+    "return_names": [
+      "status"
+    ]
+  }
+}

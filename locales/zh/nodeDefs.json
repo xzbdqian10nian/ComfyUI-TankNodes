@@ -1,14 +1,14 @@
 {
   "Qwen38VLLoader": {
-    "display_name": "Qwen3.8 VL · 本地加载器",
-    "description": "通过 CUDA llama.cpp 加载本地 Qwen3.8 GGUF 主模型和视觉投影模型。",
+    "display_name": "Qwen3.8 模型加载 · Tank",
+    "description": "选择 Qwen3.8 GGUF 主模型和匹配的视觉投影文件，连接本地多模态对话；运行对话时才加载权重。",
     "inputs": {
       "model_file": {
-        "name": "主模型文件",
+        "name": "主模型文件（GGUF）",
         "tooltip": "Qwen3.8 主模型 GGUF 文件。32GB 显存可先从 Q4_K_M 开始。"
       },
       "mmproj_file": {
-        "name": "视觉投影模型",
+        "name": "视觉投影文件（mmproj）",
         "tooltip": "理解图片和视频帧所必需的视觉投影 GGUF 文件。"
       },
       "batch_size": {
@@ -21,7 +21,7 @@
       },
       "gpu_layers": {
         "name": "GPU 层数",
-        "tooltip": "卸载到 GPU 的 Transformer 层数。-1 表示全部卸载；需要部分卸载时调低此值。"
+        "tooltip": "放到 GPU 上运行的 Transformer 层数。-1 表示全部层；降低可将部分层留在 CPU。"
       },
       "free_comfy_vram": {
         "name": "释放 ComfyUI 显存",
@@ -30,17 +30,17 @@
     },
     "outputs": {
       "0": {
-        "name": "后端",
-        "tooltip": "已加载的本地 Qwen3.8 VL 后端，连接到 Vision LLM 对话节点。"
+        "name": "模型配置",
+        "tooltip": "已准备的模型配置，连接本地多模态对话 · Tank；尚不代表权重已加载。"
       },
       "1": {
-        "name": "后端信息",
-        "tooltip": "实际主模型、视觉投影模型、GPU 层数设置和后端状态。"
+        "name": "模型信息",
+        "tooltip": "主模型、视觉投影、来源与推荐配对、GPU 层数及加载状态。配对提示依据文件名，不代替模型文件校验。"
       }
     }
   },
   "VisionAPIEnv": {
-    "display_name": "OpenAI 兼容 API · 环境变量",
+    "display_name": "API 对话（环境变量密钥）· Tank",
     "description": "使用环境变量中的 API 密钥发送一次文本、单图、多图、视频帧或 VIDEO 请求。",
     "inputs": {
       "base_url": {
@@ -48,7 +48,7 @@
         "tooltip": "OpenAI 兼容接口的 base URL，不要包含 /chat/completions。环境变量节点只能访问管理员允许列表中的主机。"
       },
       "model": {
-        "name": "模型名称",
+        "name": "模型 ID",
         "tooltip": "API 服务商实际提供的模型 ID。"
       },
       "api_key_env": {
@@ -81,14 +81,14 @@
       },
       "max_video_frames": {
         "name": "最多视频帧数",
-        "tooltip": "VIDEO 转为视频帧时均匀抽取的最大帧数；不会限制 IMAGE 批次。"
+        "tooltip": "对视频及视频帧输入，均匀抽样最多这么多帧；图片输入中的批次会全部发送。"
       },
       "video_transport": {
         "name": "视频传输方式",
-        "tooltip": "选择抽帧、原生 video_url 或自动回退到抽帧；服务商必须支持所选格式。"
+        "tooltip": "frames：均匀抽帧；video_url：发送原生视频；auto：编码成功则发送原生视频，否则抽帧。服务商仍须支持对应格式。"
       },
       "image": {
-        "name": "可选图片或批次",
+        "name": "图片 / 图片批次",
         "tooltip": "单张图片或 IMAGE 批次；每张图都会在同一个 API 请求中发送。"
       },
       "video_frames": {
@@ -110,13 +110,21 @@
         "tooltip": "服务商返回的 token 用量 JSON（如果有）。"
       },
       "2": {
-        "name": "统计",
+        "name": "运行统计",
         "tooltip": "请求耗时和后端信息。"
+      },
+      "3": {
+        "name": "思考内容",
+        "tooltip": "服务商返回的思考内容；未返回时为空。"
+      },
+      "4": {
+        "name": "原始响应",
+        "tooltip": "未经回答提取的助手内容，或完整工具调用消息。"
       }
     }
   },
   "VisionAPIDirect": {
-    "display_name": "OpenAI 兼容 API · 直接 Key",
+    "display_name": "API 对话（直接密钥）· Tank",
     "description": "使用节点中填写的 API 密钥发送一次文本、单图、多图、视频帧或 VIDEO 请求。",
     "inputs": {
       "base_url": {
@@ -124,7 +132,7 @@
         "tooltip": "OpenAI 兼容接口的 base URL，不要包含 /chat/completions。"
       },
       "model": {
-        "name": "模型名称",
+        "name": "模型 ID",
         "tooltip": "API 服务商实际提供的模型 ID。"
       },
       "api_key": {
@@ -157,14 +165,14 @@
       },
       "max_video_frames": {
         "name": "最多视频帧数",
-        "tooltip": "VIDEO 转为视频帧时均匀抽取的最大帧数；不会限制 IMAGE 批次。"
+        "tooltip": "对视频及视频帧输入，均匀抽样最多这么多帧；图片输入中的批次会全部发送。"
       },
       "video_transport": {
         "name": "视频传输方式",
-        "tooltip": "选择抽帧、原生 video_url 或自动回退到抽帧；服务商必须支持所选格式。"
+        "tooltip": "frames：均匀抽帧；video_url：发送原生视频；auto：编码成功则发送原生视频，否则抽帧。服务商仍须支持对应格式。"
       },
       "image": {
-        "name": "可选图片或批次",
+        "name": "图片 / 图片批次",
         "tooltip": "单张图片或 IMAGE 批次；每张图都会在同一个 API 请求中发送。"
       },
       "video_frames": {
@@ -186,18 +194,26 @@
         "tooltip": "服务商返回的 token 用量 JSON（如果有）。"
       },
       "2": {
-        "name": "统计",
+        "name": "运行统计",
         "tooltip": "请求耗时和后端信息。"
+      },
+      "3": {
+        "name": "思考内容",
+        "tooltip": "服务商返回的思考内容；未返回时为空。"
+      },
+      "4": {
+        "name": "原始响应",
+        "tooltip": "未经回答提取的助手内容，或完整工具调用消息。"
       }
     }
   },
   "VisionChat": {
-    "display_name": "Vision LLM · 对话",
-    "description": "把文字、图片或视频发送给本地模型或 OpenAI 兼容 API 后端。",
+    "display_name": "本地多模态对话 · Tank",
+    "description": "使用本地模型完成一次文字、图片、多图或视频对话；不会在运行之间自动保留聊天历史。",
     "inputs": {
       "backend": {
-        "name": "后端",
-        "tooltip": "连接 Qwen3.8 VL 本地加载器或任意 OpenAI 兼容 API 后端。"
+        "name": "模型配置",
+        "tooltip": "连接 Qwen3.8 模型加载 · Tank。API 对话节点直接输出回答，不连接这里。"
       },
       "system_prompt": {
         "name": "人设 / 系统提示词",
@@ -209,7 +225,7 @@
       },
       "thinking_mode": {
         "name": "思考强度",
-        "tooltip": "思考控制：auto 保留旧版/后端默认行为；off 关闭思考；low、medium、high、xhigh、max 是统一的五档思考强度。本地 Qwen3.8 原生仅支持 low、medium、xhigh，因此 high 映射为 medium，max 映射为 xhigh。"
+        "tooltip": "auto：沿用旧版本默认关闭思考；off：明确关闭。low / medium / xhigh 为当前本地映射档位；high 按 medium、max 按 xhigh 执行。运行统计同时显示选择值与实际值。"
       },
       "context_length": {
         "name": "上下文长度",
@@ -245,18 +261,18 @@
       },
       "max_video_frames": {
         "name": "最多视频帧数",
-        "tooltip": "VIDEO 转为视频帧时均匀抽取并发送给模型的最大帧数；不会限制 IMAGE 批次。"
+        "tooltip": "对视频及视频帧输入，均匀抽样最多这么多帧；图片输入中的批次会全部发送。"
       },
       "video_transport": {
         "name": "视频传输方式",
-        "tooltip": "API 后端可选择自动尝试原生视频、抽帧或原生 video_url；本地模型始终使用抽帧。"
+        "tooltip": "兼容选项：本地模型始终抽帧；保留旧工作流中的值。"
       },
       "unload_after": {
         "name": "生成后卸载",
         "tooltip": "生成后释放此后端。开启可回收显存；关闭则连续对话更快。"
       },
       "image": {
-        "name": "图片",
+        "name": "图片 / 图片批次",
         "tooltip": "单张图片或包含多张静态图片的 IMAGE 批次。"
       },
       "video_frames": {
@@ -278,7 +294,7 @@
         "tooltip": "去掉隐藏思考标签后的最终回答。"
       },
       "1": {
-        "name": "推理过程",
+        "name": "思考内容",
         "tooltip": "后端提供 reasoning 内容时输出推理文本。"
       },
       "2": {
@@ -292,12 +308,16 @@
     }
   },
   "VisionUnload": {
-    "display_name": "后端卸载",
-    "description": "主动卸载本地模型，或关闭 API 客户端。",
+    "display_name": "模型释放 · Tank",
+    "description": "释放本地模型；把对话回答接入“等待完成”以确保生成后再释放。也可直接开启对话节点的“生成后卸载”。",
     "inputs": {
       "backend": {
-        "name": "后端",
-        "tooltip": "需要卸载或关闭的后端实例。"
+        "name": "模型配置",
+        "tooltip": "连接本地模型加载器。"
+      },
+      "after": {
+        "name": "等待完成",
+        "tooltip": "可选：连接对话节点的回答，建立先生成、后释放的执行顺序。"
       }
     },
     "outputs": {

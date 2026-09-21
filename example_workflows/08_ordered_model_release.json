@@ -1,8 +1,8 @@
 {
-  "id": "69843d24-0d0a-4338-b629-588043b5bd82",
-  "revision": 1,
-  "last_node_id": 101,
-  "last_link_id": 5,
+  "id": "212a080f-fe30-45e5-839c-e3149550c884",
+  "revision": 0,
+  "last_node_id": 103,
+  "last_link_id": 4,
   "nodes": [
     {
       "id": 99,
@@ -20,13 +20,13 @@
       "mode": 0,
       "inputs": [],
       "outputs": [],
-      "title": "03 · 多图 / Multiple images",
+      "title": "08 · 生成后释放 / Ordered release",
       "properties": {
         "Node name for S&R": "MarkdownNote",
         "cnr_id": "comfy-core"
       },
       "widgets_values": [
-        "## 多图理解 / Multiple images\n合并图片批次，连接图片输入；整个批次都会发送。\nCombine images into a batch and connect image; every image is sent."
+        "## 有顺序的模型释放 / Ordered model release\n对话的回答连接“等待完成”，确保生成结束后再释放；原来的回答预览仍保留。\nConnect the chat response to after so release runs after generation; the response preview is retained."
       ],
       "color": "#243447",
       "bgcolor": "#31465c"
@@ -100,7 +100,8 @@
           "name": "backend",
           "type": "VISION_LLM_BACKEND",
           "links": [
-            1
+            1,
+            3
           ]
         },
         {
@@ -123,169 +124,18 @@
       ]
     },
     {
-      "id": 3,
-      "type": "LoadImage",
-      "pos": [
-        500,
-        90
-      ],
-      "size": [
-        390,
-        350
-      ],
-      "flags": {},
-      "order": 1,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "COMBO",
-          "widget": {
-            "name": "image"
-          },
-          "link": null
-        },
-        {
-          "name": "upload",
-          "type": "IMAGEUPLOAD",
-          "widget": {
-            "name": "upload"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            2
-          ]
-        },
-        {
-          "name": "MASK",
-          "type": "MASK",
-          "links": null
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "LoadImage",
-        "cnr_id": "comfy-core"
-      },
-      "widgets_values": [
-        "动漫-八重神子吃冰淇凌.png",
-        "image"
-      ]
-    },
-    {
-      "id": 4,
-      "type": "LoadImage",
-      "pos": [
-        500,
-        500
-      ],
-      "size": [
-        390,
-        350
-      ],
-      "flags": {},
-      "order": 2,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "COMBO",
-          "widget": {
-            "name": "image"
-          },
-          "link": null
-        },
-        {
-          "name": "upload",
-          "type": "IMAGEUPLOAD",
-          "widget": {
-            "name": "upload"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            3
-          ]
-        },
-        {
-          "name": "MASK",
-          "type": "MASK",
-          "links": null
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "LoadImage",
-        "cnr_id": "comfy-core"
-      },
-      "widgets_values": [
-        "真人古代男反.png",
-        "image"
-      ]
-    },
-    {
-      "id": 5,
-      "type": "ImageBatch",
-      "pos": [
-        920,
-        380
-      ],
-      "size": [
-        260,
-        100
-      ],
-      "flags": {},
-      "order": 3,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image1",
-          "type": "IMAGE",
-          "link": 2
-        },
-        {
-          "name": "image2",
-          "type": "IMAGE",
-          "link": 3
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            4
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "ImageBatch",
-        "cnr_id": "comfy-core"
-      },
-      "widgets_values": []
-    },
-    {
       "id": 2,
       "type": "VisionChat",
       "pos": [
-        1230,
-        160
+        960,
+        120
       ],
       "size": [
         520,
         590
       ],
       "flags": {},
-      "order": 4,
+      "order": 2,
       "mode": 0,
       "inputs": [
         {
@@ -409,7 +259,7 @@
           "name": "image",
           "type": "IMAGE",
           "shape": 7,
-          "link": 4
+          "link": null
         },
         {
           "name": "video_frames",
@@ -438,7 +288,8 @@
           "name": "response",
           "type": "STRING",
           "links": [
-            5
+            2,
+            4
           ]
         },
         {
@@ -463,7 +314,7 @@
       },
       "widgets_values": [
         "你是运行在 ComfyUI 中的专业多模态助手。请准确、直接地回答。",
-        "请分别描述两张图片，并比较人物、场景和画面风格。",
+        "请用三句话介绍 Qwen3.8-27B 的主要能力。",
         "medium",
         8192,
         4096,
@@ -511,7 +362,7 @@
       "id": 101,
       "type": "PreviewAny",
       "pos": [
-        1870,
+        1600,
         120
       ],
       "size": [
@@ -519,13 +370,13 @@
         260
       ],
       "flags": {},
-      "order": 5,
+      "order": 3,
       "mode": 0,
       "inputs": [
         {
           "name": "source",
           "type": "ANY",
-          "link": 5
+          "link": 2
         }
       ],
       "outputs": [
@@ -541,6 +392,46 @@
         "cnr_id": "comfy-core"
       },
       "widgets_values": []
+    },
+    {
+      "id": 103,
+      "type": "VisionUnload",
+      "pos": [
+        1600,
+        470
+      ],
+      "size": [
+        350,
+        130
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "backend",
+          "type": "VISION_LLM_BACKEND",
+          "link": 3
+        },
+        {
+          "name": "after",
+          "type": "STRING",
+          "link": 4
+        }
+      ],
+      "outputs": [
+        {
+          "name": "status",
+          "type": "STRING",
+          "links": null,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VisionUnload",
+        "cnr_id": "qwen38-vl"
+      },
+      "widgets_values": []
     }
   ],
   "links": [
@@ -554,34 +445,26 @@
     ],
     [
       2,
-      3,
-      0,
-      5,
-      0,
-      "IMAGE"
-    ],
-    [
-      3,
-      4,
-      0,
-      5,
-      1,
-      "IMAGE"
-    ],
-    [
-      4,
-      5,
-      0,
-      2,
-      15,
-      "IMAGE"
-    ],
-    [
-      5,
       2,
       0,
       101,
       0,
+      "STRING"
+    ],
+    [
+      3,
+      1,
+      0,
+      103,
+      0,
+      "VISION_LLM_BACKEND"
+    ],
+    [
+      4,
+      2,
+      0,
+      103,
+      1,
       "STRING"
     ]
   ],

@@ -1,32 +1,28 @@
-# ComfyUI 的 Qwen3.8 VL
+# TankNodes
 
 [English](README.md) | 简体中文
 
-这是一个 ComfyUI 自定义节点包，支持通过 GGUF/`llama.cpp` 在本地运行 Qwen3.8 VL，也支持简单的 OpenAI-compatible 多模态 API。两种后端共用一个对话节点，因此同一套文本、图片和视频工作流可以切换后端使用。
+**Tank / xzbd** 的 ComfyUI 日常节点工具箱。当前提供本地 Qwen3.8 多模态理解和 OpenAI 兼容 API 对话，所有节点名称以 **· Tank** 结尾，统一位于 **TankNodes** 菜单下。
 
-> 本项目是独立社区项目，不包含模型权重。
+本地使用 **模型加载 → 本地对话**；两个 API 对话节点直接发请求、输出结果，不连接本地对话节点。内部共用媒体处理和回答解析。
 
 ## 快速开始
 
-在 ComfyUI 安装目录执行：
+在 `ComfyUI/custom_nodes` 目录执行：
 
 ```bash
-cd ComfyUI/custom_nodes
 git clone https://github.com/xzbdqian10nian/ComfyUI-Qwen3.8-VL.git
 ```
 
-1. 将一套匹配的 GGUF 主模型和 `mmproj` projector 放入：
+为兼容升级，仓库地址、安装目录、Registry 包 ID `qwen38-vl` 和内部节点 ID 继续保留。TankNodes 是显示名称，同一环境只安装一份本插件。
 
-   ```text
-   ComfyUI/models/LLM/Qwen3.8/
-   ```
+1. 将 GGUF 主模型及匹配的视觉投影文件放入 `ComfyUI/models/LLM/Qwen3.8/`，支持子目录；可用 `QWEN38_MODEL_DIR` 指定独立目录。
+2. 重启 ComfyUI 并刷新浏览器。
+3. 添加 **Qwen3.8 模型加载 · Tank**，选择两个文件。没有模型时会明确显示“未找到”，不会用推荐文件名冒充已安装模型。
+4. 将 **模型配置** 输出连接到 **本地多模态对话 · Tank**。
+5. 填写人设与用户输入，按需连接图片或视频并运行。执行对话时才加载权重。
 
-2. 重启 ComfyUI（或等待服务加载节点后刷新浏览器）。
-3. 添加 `Qwen3.8 VL Local Loader`，选择主模型和 projector。
-4. 将它的 `backend` 输出连接到 `Vision LLM Chat`。
-5. 填写 prompt 并执行工作流。图片连接 `IMAGE`，视频可连接 `VIDEO` 或 `IMAGE` 帧批次。
-
-加载器使用 ComfyUI 当前配置的模型目录，因此普通 ComfyUI、便携版和云端镜像都可以使用同一套节点。若确实需要单独目录，可用 `QWEN38_MODEL_DIR` 环境变量覆盖默认目录。
+使用 API 时，直接添加任一 API 对话节点，填写接口地址、准确的 **模型 ID**、密钥来源和提示词，无需本地 GGUF 模型。
 
 ### 更新
 
@@ -34,51 +30,25 @@ git clone https://github.com/xzbdqian10nian/ComfyUI-Qwen3.8-VL.git
 git -C ComfyUI-Qwen3.8-VL pull --ff-only
 ```
 
-更新后重启 ComfyUI。如果旧版本安装在其他本地目录名下，请在那个目录执行同样的 `git pull` 命令。
+在现有插件目录的上级执行，或进入原目录运行 `git pull --ff-only`。更新后重启 ComfyUI 并刷新浏览器。
 
 ## 节点
 
 | 节点 | 用途 |
 | --- | --- |
-| `Qwen3.8 VL Local Loader` | 加载本地 Qwen3.8 GGUF 主模型和匹配的视觉 projector。 |
-| `OpenAI-Compatible API · Environment Variable` | 使用环境变量中的 API Key 调用兼容接口。 |
-| `OpenAI-Compatible API · Direct Key` | 使用节点中填写的 Key 调用兼容接口。 |
-| `Vision LLM Chat` | 向选定后端发送文本、图片、图片批次、视频帧或 ComfyUI `VIDEO`。 |
-| `Backend Unload` | 主动释放本地模型或关闭 API 后端。 |
+| Qwen3.8 模型加载 · Tank | 选择 GGUF 文件，准备本地模型配置。 |
+| 本地多模态对话 · Tank | 使用本地模型完成一次文本、单图、多图或视频请求。 |
+| API 对话（环境变量密钥）· Tank | 使用服务器环境变量中的密钥直接请求 API。 |
+| API 对话（直接密钥）· Tank | 使用节点中填写的密钥直接请求 API。 |
+| 模型释放 · Tank | 释放模型；把对话回答接入“等待完成”，明确先生成后释放。 |
 
-节点名称与具体 API 服务商无关：本地加载器专用于 Qwen3.8，API 节点可调用兼容的视觉接口。
+每次运行都是独立请求，不会自动保留多轮聊天历史。常用输入保持可见，采样、上下文和传输配置使用原生“高级参数”标记；在 ComfyUI 的 Nodes 2.0 界面中可以展开/收起，经典画布仍一起显示；不修改控件序列化。控件顺序与保存值保持不变。本地的视频传输设置保留为高级兼容项，本地模型始终抽帧。
 
-## 本地 Qwen3.8 VL 模型
+单次对话可以直接开启 **生成后卸载**；需要独立释放节点时，连接其 **等待完成** 输入建立执行顺序。
 
-本地后端需要两个匹配的文件：
+## 模型与思考强度
 
-```text
-ComfyUI/models/LLM/Qwen3.8/
-├── <Qwen3.8 主模型>.gguf
-└── <匹配的 mmproj>.gguf
-```
-
-主模型包含语言模型权重，`mmproj` 是图片和视频理解所需的视觉投影模型。请使用同一模型发布版本中的两个文件，不要混用不同发布者的 projector。
-
-32GB 显存建议从 `Q4_K_M` 或同等级的 UD Q4 版本开始。Q6/Q8 版本需要更多显存。上下文长度、batch size、micro-batch size、GPU layers 和 ComfyUI 显存清理都在节点中配置，不依赖特定平台的启动脚本。
-
-### 思考强度
-
-`Vision LLM · 对话` 和两个 API 节点共用一套选择：
-
-- `auto`：保留旧版/服务商默认行为；
-- `off`：请求不思考的直接回答；
-- `low`、`medium`、`high`、`xhigh`、`max`：当前 API 常用的统一五档思考强度。
-
-节点运行统计会显示选择档位和实际生效档位。五档界面在各后端之间通用，
-但具体模型可能只支持其中一部分。[Qwen3.8-27B 官方支持](https://huggingface.co/Qwen/Qwen3.8-27B)
-`low`、`medium`、`xhigh`；本地 Qwen3.8 会安全地把 `high` 映射为 `medium`、把 `max`
-映射为 `xhigh`，避免模板因不支持的值报错。切换本地思考强度只更新对话模板，
-不会重新加载模型权重。
-
-### 模型下载
-
-以下是 Qwen3.8-27B 的社区 GGUF 发布版本，请按需下载。
+主模型与视觉投影应来自同一发布版本。选项保留真实文件名，避免用商品名替换执行参数。加载器的 **模型信息** 会给出已知来源、版本、推荐投影及文件名是否匹配；这些是文件名层面的提示，不代替模型架构或文件哈希校验。自行改名的文件无法可靠识别来源。
 
 | 来源 | 常用文件 | 区别 |
 | --- | --- | --- |
@@ -86,117 +56,64 @@ ComfyUI/models/LLM/Qwen3.8/
 | [Huihui AI Abliterated](https://huggingface.co/huihui-ai/Huihui-Qwen3.8-27B-abliterated-GGUF) | [Q4_K](https://huggingface.co/huihui-ai/Huihui-Qwen3.8-27B-abliterated-GGUF/resolve/main/Huihui-Qwen3.8-27B-abliterated-Q4_K.gguf?download=true) 或 Q4_K_L + `mmproj-model-bf16.gguf` | 社区低拒答版本；较大的 Q4_K_L 会保留更多高精度张量。 |
 | [Orcarouter Uncensored](https://huggingface.co/orcarouter/Qwen3.8-27B-Uncensored-GGUF) | [Q4_K_M](https://huggingface.co/orcarouter/Qwen3.8-27B-Uncensored-GGUF/resolve/main/Qwen3.8-27B-Uncensored-Q4_K_M.gguf?download=true) + [mmproj f16](https://huggingface.co/orcarouter/Qwen3.8-27B-Uncensored-GGUF/resolve/main/mmproj-Qwen3.8-27B-Uncensored-f16.gguf?download=true) | 另一种社区低拒答版本；Hugging Face 可能要求登录或同意访问条件。 |
 
-社区变体在对齐、拒答行为、质量和许可证方面可能不同。公开部署或再分发前，请阅读对应模型卡片。
+以上为原有模型目录资料，下载前请核对来源当前文件及模型说明。插件不包含或自动下载模型权重。
 
-## API 后端
+思考选择继续提供 `auto / off / low / medium / high / xhigh / max`：
 
-两个 API 节点都会发送简洁的 OpenAI Chat Completions-compatible 请求。配置：
+- 本地 `auto` 沿用旧版本默认关闭思考，`off` 明确关闭。
+- 当前 Qwen3.8 本地适配将 `high` 按 `medium`、`max` 按 `xhigh` 执行；运行统计同时显示选择值与实际值。切换思考强度不重载权重，改变上下文长度会重载。
+- API `auto` 不修改服务商默认行为，其他选项按适配逻辑发送，实际支持情况由接口决定。旧 llama.cpp 若只支持开关，统计会明确说明。
 
-- `base_url`：服务商 API 根地址，例如 `https://api.openai.com/v1`；
-- `model`：服务商提供的模型 ID；
-- `prompt`：发送给模型的指令；
-- `image`：可选的单张图片或 `IMAGE` 批次；
-- `video_frames` 或 `video`：可选的视频输入，取决于服务商支持情况。
+## 图片与视频
 
-API 节点中的 `video_frames` 是 `IMAGE` 批次，适合支持多个 `image_url` 内容块的服务商；
-`video` 是 ComfyUI 原生 `VIDEO` 对象。通用兼容性优先选择
-`video_transport = frames`，明确支持 OpenAI-compatible `video_url` 内容块的服务商可选择
-`video_url`，`auto` 则会在视频可以编码时优先尝试原生视频，否则使用抽帧。最终仍取决于服务商
-是否支持对应的视频格式。
+**图片** 输入会发送整个图片批次；**视频帧** 输入会按“最多视频帧数”抽样 IMAGE 批次；**视频** 输入会覆盖整段视频均匀抽样。缺少总帧数信息的容器先计数再抽样，不再只取片头。插件不会默默缩小图片。
 
-### 环境变量 Key
+API `frames` 发送抽取的图片帧，`video_url` 发送原生视频。`auto` 仅在本地编码失败时回退抽帧，不会在服务商拒绝请求后自动重试。服务商仍须支持对应格式。原生上传保留真实容器 MIME 类型。统计分别记录图片数、实际抽帧数和原生视频数；后端未返回 token 用量时，速度显示 n/a。
 
-启动 ComfyUI 前设置：
+## API 设置与输出
+
+- **接口基础地址**：例如 `https://api.openai.com/v1`，不含 `/chat/completions`。
+- **模型 ID**：填写服务商原始标识，不填写中文显示名。
+- **最大输出 token 数 = 0**：省略限制，使用服务商默认值。
+- **随机度 = 0**：API 不发送 temperature 参数；本地 0 保持原来的确定性采样语义。
+- **随机种子**：按配置发送，是否支持取决于服务商。
+
+API 前三个输出的位置保持 **回答、用量、运行统计**，末尾新增 **思考内容、原始响应**。服务商未返回思考内容时该输出为空。“用量”JSON 保持原有两个字符串类型 token 字段。本地仍为 **回答 / 思考内容 / 原始响应 / 运行统计**。
+
+### 环境变量密钥
+
+启动 ComfyUI 前设置环境变量，节点内只填写变量名称：
 
 ```bash
 export OPENAI_API_KEY='your-api-key'
 ```
 
-在 `OpenAI-Compatible API · Environment Variable` 中，`api_key_env` 填 `OPENAI_API_KEY`，不要填 Key 本身。
-
-### 直接填写 Key
-
-临时测试时可以使用 `OpenAI-Compatible API · Direct Key`。不要把真实 Key 保存到公开工作流或提交到 Git。
-
-### 参数行为
-
-- `max_tokens = 0`：不发送 `max_tokens`，使用服务商默认值；
-- `temperature = 0`：不发送 `temperature`，使用服务商默认值；
-- `seed`：服务商支持时发送随机种子；
-- `思考强度`：可选 `auto`、`off` 或统一五档思考强度；服务商可能会映射或拒绝其不支持的档位；
-- 服务商没有提供输出总量时，API 进度条会保守推进，并在正常响应结束后完成。
-
-### 环境变量 Key 的地址安全限制
-
-环境变量节点不会把服务器上的 Key 发送到工作流任意填写的地址。它只允许访问服务器端允许列表中的精确 HTTPS 主机，默认允许 `api.openai.com`。如果要允许其他服务商，请在启动 ComfyUI 前设置：
+服务器允许列表默认包含 `api.openai.com` 和本机回环地址。其他服务商由管理员设置精确主机或 `host:port`：
 
 ```bash
 export COMFYUI_API_ALLOWED_HOSTS='api.openai.com,api.example.com'
 ```
 
-列表只接受精确的 `host` 或 `host:port`，不接受通配符。直接 Key 节点与环境变量节点分开；它可以使用其他地址，因为它只发送工作流用户在节点中明确填写的 Key，不会读取服务器环境变量。公网接口请使用 HTTPS。
-
-## 图片和视频
-
-- 单图直接连接到 `image`。
-- 将 `IMAGE` 批次连接到 `image`，一次请求发送多张图片。
-- 插件不会静默缩放图片或截断 `IMAGE` 批次；需要缩放或限制帧数时，在上游添加对应节点。
-- 本地推理或支持图像帧的服务商，可将解码后的视频帧连接到 `video_frames`。
-- 服务商支持视频传输时，可将 ComfyUI `VIDEO` 连接到 `video`；插件会按照 `max_video_frames` 抽帧。
+回环服务以外要求 HTTPS。直接密钥节点只使用填写的密钥；分享工作流前清空真实密钥。插件不携带作者密钥或私人接口地址。
 
 ## 示例工作流
 
-[`example_workflows/`](example_workflows/) 提供五个本地后端示例：
+[example_workflows](example_workflows/) 中有 8 份示例，覆盖纯文本、单图、多图、视频帧、原生 VIDEO、两种 API 密钥方式及有顺序的模型释放。原有本地示例的功能参数保留，操作说明统一中英对照，标准插件节点标题跟随界面语言。
 
-| 文件 | 演示内容 |
-| --- | --- |
-| [`01_text_chat.json`](example_workflows/01_text_chat.json) | 纯文本对话 |
-| [`02_single_image.json`](example_workflows/02_single_image.json) | 单张图片 |
-| [`03_multiple_images.json`](example_workflows/03_multiple_images.json) | 多张图片作为一个 `IMAGE` 批次 |
-| [`04_video_frames.json`](example_workflows/04_video_frames.json) | `VIDEO` 解码为图像帧 |
-| [`05_comfyui_video.json`](example_workflows/05_comfyui_video.json) | ComfyUI 原生 `VIDEO` 输入 |
+## 旧工作流兼容
 
-每个示例都包含模型/设置 Markdown 说明，并将 Chat 的回答连接到 ComfyUI 的 `Preview as Text` 展示节点。拖入后替换素材，并在加载器中选择模型目录里实际存在的一对文件。
+保留 5 个内部节点 ID、既有字段名、控件顺序、原输出端口位置、模型目录及 Registry 包 ID。`backend_default / thinking / instruct` 等旧思考值继续兼容；浏览器扩展识别旧的 11 控件 API 节点，补入缺失的思考默认值，不挪错视频设置。能从旧输入顺序确认的 0.5.0 提示词顺序也会修正，并标记为已迁移，避免重复交换。缺少版本/布局证据的更早工作流不猜测文字用途。用户自定义标题和连线保留。
 
-## 兼容性和依赖
+本轮名称调整不代表 Registry 或 GitHub 仓库迁移。升级后应同时重启服务器和刷新浏览器，让节点定义与旧工作流兼容扩展使用同一版本。
 
-- Python 3.10+。
-- 本地 GGUF 推理需要支持当前 CUDA/runtime 的 `llama-cpp-python`；请使用与现有 ComfyUI 镜像匹配的 wheel。
-- API 模式优先使用现有 `openai` SDK；插件包含标准库 HTTP 回退。
-- 插件不会替换 PyTorch、CUDA、NVIDIA 驱动或现有 Python 环境。
-- `requirements.txt` 只保留插件所需的少量依赖。
+## 依赖与开发
 
-## ComfyUI Manager 和 Registry
+Python 3.10+，沿用 ComfyUI 原有 Torch 环境。本地推理需要适配当前 CUDA 的 `llama-cpp-python`；API 使用现有 OpenAI SDK，缺少时使用标准库 HTTP 实现。插件不会替换 Torch、CUDA 或驱动，`requirements.txt` 只保留少量额外依赖。
 
-仓库已在 `pyproject.toml` 中加入 Comfy Registry 元数据，包括符合规范的包名、语义化版本、仓库地址、Publisher ID 和展示名称。发布到 [Comfy Registry](https://registry.comfy.org) 后，就可以在新版 ComfyUI Manager 中搜索和安装。在正式发布前，也可以直接执行 Git 安装：
+`__init__.py` 汇总注册；`local_nodes.py` 与 `api_nodes.py` 定义节点；`chat.py` 共用请求组装和回答处理；`backends.py` 管理后端；模型目录、媒体、思考参数和进度各自独立。`web/` 只处理旧工作流兼容，不自定义控件序列化。
 
-```bash
-git clone https://github.com/xzbdqian10nian/ComfyUI-Qwen3.8-VL.git
-```
+开发测试在独立环境安装 pytest、Torch、NumPy、Pillow、PyAV、OpenAI，参见 [测试说明](tests/README.md)。
 
-## 问题排查
+## 致谢
 
-**节点没有出现**
-
-1. 确认仓库位于 `ComfyUI/custom_nodes/` 下；
-2. 查看 ComfyUI 控制台中的插件导入记录；
-3. 强制刷新浏览器；
-4. 确认没有在第二个目录启用同一个插件的副本。
-
-**加载器没有模型选项**
-
-确认两个 `.gguf` 文件都位于 `ComfyUI/models/LLM/Qwen3.8/`，下载已完成，并且 projector 文件名包含 `mmproj`。
-
-**本地模型加载失败**
-
-确认主模型和 projector 匹配，并检查当前机器上的 `llama-cpp-python` wheel 是否支持现有运行时。显存不足时降低上下文长度、batch size 或 GPU layers。
-
-**API 请求失败**
-
-检查 endpoint 是否需要 `/v1`、模型 ID、Key 来源、服务商是否支持视觉输入，以及服务商是否接受当前图片/视频格式。
-
-## 鸣谢
-
-感谢 [Qwen Team](https://huggingface.co/Qwen) 开源 [Qwen3.8-27B](https://huggingface.co/Qwen/Qwen3.8-27B)，以及 [Unsloth](https://huggingface.co/unsloth)、[huihui-ai](https://huggingface.co/huihui-ai) 和 [orcarouter](https://huggingface.co/orcarouter) 提供社区 GGUF 发布版本。
-
-本项目独立维护，与 Qwen Team 及上述社区发布者不存在隶属或官方背书关系。
+感谢 Qwen 团队及上述社区 GGUF 发布者。TankNodes 为独立项目，不包含模型权重，也不代表模型服务商对本插件的认可。

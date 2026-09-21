@@ -1,0 +1,312 @@
+{
+  "id": "38f03a88-f7c2-404a-b049-29293136d2e5",
+  "revision": 0,
+  "last_node_id": 102,
+  "last_link_id": 2,
+  "groups": [],
+  "definitions": {
+    "subgraphs": []
+  },
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.9,
+      "offset": [
+        40,
+        40
+      ]
+    }
+  },
+  "version": 0.5,
+  "nodes": [
+    {
+      "id": 99,
+      "type": "MarkdownNote",
+      "pos": [
+        40,
+        0
+      ],
+      "size": [
+        1150,
+        180
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "title": "06 · API 对话 / API chat",
+      "properties": {
+        "Node name for S&R": "MarkdownNote",
+        "cnr_id": "comfy-core"
+      },
+      "widgets_values": [
+        "## API 对话 / API chat\n填写接口地址与模型 ID，再配置密钥来源。API 节点直接输出结果，不接本地加载器。\nSet the base URL, exact model ID and key source. This node returns text directly.\n分享前清空真实密钥。 / Clear real keys before sharing."
+      ],
+      "color": "#243447",
+      "bgcolor": "#31465c"
+    },
+    {
+      "id": 1,
+      "type": "VisionAPIEnv",
+      "pos": [
+        40,
+        220
+      ],
+      "size": [
+        510,
+        650
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "base_url",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "base_url"
+          }
+        },
+        {
+          "name": "model",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "model"
+          }
+        },
+        {
+          "name": "api_key_env",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "api_key_env"
+          }
+        },
+        {
+          "name": "system_prompt",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "system_prompt"
+          }
+        },
+        {
+          "name": "prompt",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "prompt"
+          }
+        },
+        {
+          "name": "max_tokens",
+          "type": "INT",
+          "link": null,
+          "widget": {
+            "name": "max_tokens"
+          }
+        },
+        {
+          "name": "temperature",
+          "type": "FLOAT",
+          "link": null,
+          "widget": {
+            "name": "temperature"
+          }
+        },
+        {
+          "name": "seed",
+          "type": "INT",
+          "link": null,
+          "widget": {
+            "name": "seed"
+          }
+        },
+        {
+          "name": "thinking_mode",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "thinking_mode"
+          }
+        },
+        {
+          "name": "max_video_frames",
+          "type": "INT",
+          "link": null,
+          "widget": {
+            "name": "max_video_frames"
+          }
+        },
+        {
+          "name": "video_transport",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "video_transport"
+          }
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "name": "video_frames",
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "name": "video",
+          "type": "VIDEO",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "response",
+          "type": "STRING",
+          "links": [
+            1
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "usage",
+          "type": "STRING",
+          "links": null,
+          "slot_index": 1
+        },
+        {
+          "name": "stats",
+          "type": "STRING",
+          "links": null,
+          "slot_index": 2
+        },
+        {
+          "name": "reasoning",
+          "type": "STRING",
+          "links": [
+            2
+          ],
+          "slot_index": 3
+        },
+        {
+          "name": "raw_response",
+          "type": "STRING",
+          "links": null,
+          "slot_index": 4
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VisionAPIEnv",
+        "cnr_id": "qwen38-vl"
+      },
+      "widgets_values": [
+        "https://api.openai.com/v1",
+        "",
+        "OPENAI_API_KEY",
+        "",
+        "请描述输入图片；没有图片时请简短介绍你的能力。 / Describe the input image, or briefly introduce your capabilities if no image is attached.",
+        0,
+        0.0,
+        1,
+        "fixed",
+        "auto",
+        8,
+        "frames"
+      ]
+    },
+    {
+      "id": 101,
+      "type": "PreviewAny",
+      "pos": [
+        650,
+        220
+      ],
+      "size": [
+        500,
+        260
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "source",
+          "type": "ANY",
+          "link": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "title": "回答 / Response",
+      "properties": {
+        "Node name for S&R": "PreviewAny",
+        "cnr_id": "comfy-core"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 102,
+      "type": "PreviewAny",
+      "pos": [
+        650,
+        520
+      ],
+      "size": [
+        500,
+        260
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "source",
+          "type": "ANY",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "title": "思考内容 / Reasoning",
+      "properties": {
+        "Node name for S&R": "PreviewAny",
+        "cnr_id": "comfy-core"
+      },
+      "widgets_values": []
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      101,
+      0,
+      "STRING"
+    ],
+    [
+      2,
+      1,
+      3,
+      102,
+      0,
+      "STRING"
+    ]
+  ]
+}

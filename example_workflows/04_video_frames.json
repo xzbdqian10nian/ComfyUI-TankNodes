@@ -1,6 +1,6 @@
 {
   "id": "24edb81d-2dc6-4395-b6fa-9dbddce7abd5",
-  "revision": 0,
+  "revision": 1,
   "last_node_id": 101,
   "last_link_id": 4,
   "nodes": [
@@ -26,7 +26,7 @@
         "cnr_id": "comfy-core"
       },
       "widgets_values": [
-        "## 视频帧理解\nLoad Video 先输出 ComfyUI VIDEO，Get Video Components 解码为 IMAGE 批次，再连接 Chat 的 video_frames。适合你已经拥有帧批次的工作流。"
+        "## 视频帧理解 / Video frames\n解码视频得到 IMAGE 批次，连接视频帧输入。最多视频帧数控制抽样数量。\nDecode VIDEO to an IMAGE batch and connect video frames. Max video frames controls sampling."
       ],
       "color": "#243447",
       "bgcolor": "#31465c"
@@ -109,7 +109,6 @@
           "links": null
         }
       ],
-      "title": "Qwen3.8 VL Local Loader",
       "properties": {
         "Node name for S&R": "Qwen38VLLoader",
         "cnr_id": "qwen38-vl"
@@ -413,7 +412,6 @@
           "links": null
         }
       ],
-      "title": "Vision LLM Chat",
       "properties": {
         "Node name for S&R": "VisionChat",
         "cnr_id": "qwen38-vl"
@@ -446,20 +444,20 @@
       ],
       "size": [
         480,
-        470
+        510
       ],
       "flags": {},
       "order": 0,
       "mode": 0,
       "inputs": [],
       "outputs": [],
-      "title": "Qwen3.8 VL · Model setup",
+      "title": "模型设置 / Model setup",
       "properties": {
         "Node name for S&R": "MarkdownNote",
         "cnr_id": "comfy-core"
       },
       "widgets_values": [
-        "## Qwen3.8 VL model\n\n### Model structure\n- Qwen3.8-27B dense vision-language model\n- GGUF main weights + matching `mmproj` vision projector\n- Local inference through CUDA `llama.cpp`\n\n### Model directory\nPlace both files in:\n\n`ComfyUI/models/LLM/Qwen3.8/`\n\n### Recommended starting point\nUse Unsloth UD-Q4_K_M with its matching `mmproj-BF16.gguf` on a 32 GB card. Keep the main model and projector from the same source.\n\n### Downloads\n- Unsloth: https://huggingface.co/unsloth/Qwen3.8-27B-GGUF\n- Huihui Abliterated: https://huggingface.co/huihui-ai/Huihui-Qwen3.8-27B-abliterated-GGUF\n- Orcarouter Uncensored: https://huggingface.co/orcarouter/Qwen3.8-27B-Uncensored-GGUF\n\n### Basic connection\n`Qwen3.8 VL Local Loader` → `Vision LLM Chat` → `Preview as Text`\n"
+        "## 模型设置 / Model setup\n\n主模型与视觉投影放在同一模型目录，可使用来源子目录避免同名投影混淆。\nPlace the main model and matching projector under the model directory; source subfolders can separate identically named projectors.\n\n`ComfyUI/models/LLM/Qwen3.8/`\n\n示例预选 Unsloth 主模型与投影；请改为实际安装的配对文件。\nThe example selects the Unsloth pair; choose the matching files actually installed.\n\n- Main model: `Qwen3.8-27B-UD-Q4_K_M.gguf`\n- Projector: `mmproj-BF16.gguf`\n\n模型加载器 → 本地多模态对话 → 文本预览\nModel Loader → Local Multimodal Chat → Preview as Text\n\n运行对话时才加载权重。API 对话直接输出文本，不接此加载器。\nWeights load when chat runs. API Chat returns text directly and does not use this loader.\n"
       ],
       "color": "#243447",
       "bgcolor": "#31465c"
@@ -468,7 +466,7 @@
       "id": 101,
       "type": "PreviewAny",
       "pos": [
-        1600,
+        1920,
         120
       ],
       "size": [

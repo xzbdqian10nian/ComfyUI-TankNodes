@@ -5,14 +5,14 @@
   "source": "unsloth/Qwen3.8-27B-GGUF",
   "sources": [
     {
-      "name": "Unsloth UD-Q4_K_M",
+      "name": "Qwen3.8 27B · Unsloth · UD-Q4_K_M",
       "repo": "unsloth/Qwen3.8-27B-GGUF",
       "model": "Qwen3.8-27B-UD-Q4_K_M.gguf",
       "mmproj": "mmproj-BF16.gguf",
       "profile": "Default recommendation; Dynamic 3.0 quantization with the original Qwen alignment."
     },
     {
-      "name": "Huihui Abliterated",
+      "name": "Qwen3.8 27B · Huihui Abliterated · Q4_K / Q4_K_L",
       "repo": "huihui-ai/Huihui-Qwen3.8-27B-abliterated-GGUF",
       "model": "Huihui-Qwen3.8-27B-abliterated-Q4_K.gguf",
       "alternative_model": "Huihui-Qwen3.8-27B-abliterated-Q4_K_L.gguf",
@@ -20,7 +20,7 @@
       "profile": "Reduced-refusal community variant; Q4_K_L retains selected tensors at higher precision."
     },
     {
-      "name": "orcarouter Uncensored",
+      "name": "Qwen3.8 27B · Orcarouter Uncensored · Q4_K_M",
       "repo": "orcarouter/Qwen3.8-27B-Uncensored-GGUF",
       "model": "Qwen3.8-27B-Uncensored-Q4_K_M.gguf",
       "mmproj": "mmproj-Qwen3.8-27B-Uncensored-f16.gguf",

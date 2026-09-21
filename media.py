@@ -138,16 +138,35 @@ def encode_video_bytes(video: Any, max_bytes: int = 256 * 1024 * 1024) -> bytes:
 
 
 def encode_video_data_url(video: Any, max_bytes: int = 256 * 1024 * 1024) -> str:
-    payload = base64.b64encode(encode_video_bytes(video, max_bytes=max_bytes)).decode("ascii")
-    return f"data:video/mp4;base64,{payload}"
+    data = encode_video_bytes(video, max_bytes=max_bytes)
+    # Keep the original container: a Matroska/WebM file is not MP4 merely
+    # because the API accepts a video_url. Unknown formats fall back to frames
+    # in auto mode, or give an explicit error in video_url mode.
+    import av
+
+    with av.open(io.BytesIO(data), mode="r") as container:
+        if not container.streams.video:
+            raise ValueError("VIDEO input has no video stream")
+        formats = set(container.format.name.split(","))
+    if "mp4" in formats:
+        mime = "video/quicktime" if data[8:12] == b"qt  " else "video/mp4"
+    elif "matroska" in formats:
+        mime = "video/webm" if b"\x42\x82\x84webm" in data[:4096] else "video/x-matroska"
+    elif "avi" in formats:
+        mime = "video/x-msvideo"
+    elif "mpegts" in formats:
+        mime = "video/mp2t"
+    else:
+        raise ValueError("Native API video format is unsupported; select frames transport")
+    payload = base64.b64encode(data).decode("ascii")
+    return f"data:{mime};base64,{payload}"
 
 
 def extract_video_frames(video: Any, max_frames: int) -> list[Image.Image]:
-    """Decode evenly sampled frames for local VLM backends.
+    """Sample the full video, retaining at most max_frames decoded images.
 
-    API backends normally send the original VIDEO as ``video_url``.  Local
-    llama.cpp VLM handlers consume image parts, so a VIDEO input is converted
-    to a small frame set here.
+    Containers such as Matroska may not expose a frame count. Count them in
+    a first pass, then reopen for exact sampling instead of taking the intro.
     """
     source = _video_source(video)
     if source is None:
@@ -158,27 +177,34 @@ def extract_video_frames(video: Any, max_frames: int) -> list[Image.Image]:
     except Exception as exc:  # pragma: no cover - ComfyUI ships PyAV
         raise RuntimeError("PyAV is required to convert VIDEO input to frames") from exc
 
-    if isinstance(source, io.BytesIO):
-        source.seek(0)
-    with av.open(source, mode="r") as container:
+    def open_video():
+        if isinstance(source, io.BytesIO):
+            source.seek(0)
+        return av.open(source, mode="r")
+
+    def video_stream(container):
         if not container.streams.video:
             raise ValueError("VIDEO input has no video stream")
-        stream = container.streams.video[0]
-        total = int(stream.frames or 0)
-        limit = max(1, int(max_frames))
-        wanted = set()
-        if total > 0:
-            wanted = set(int(x) for x in np.linspace(0, total - 1, min(total, limit), dtype=int))
+        return container.streams.video[0]
 
+    with open_video() as container:
+        stream = video_stream(container)
+        total = int(stream.frames or 0)
+        if total <= 0:
+            total = sum(1 for _ in container.decode(stream))
+    if total <= 0:
+        raise ValueError("VIDEO input contains no decodable frames")
+
+    limit = max(1, int(max_frames))
+    wanted = set(int(x) for x in np.linspace(0, total - 1, min(total, limit), dtype=int))
+    with open_video() as container:
+        stream = video_stream(container)
         frames: list[Image.Image] = []
         for index, frame in enumerate(container.decode(stream)):
-            if total > 0:
-                if index not in wanted:
-                    continue
-            elif index >= limit:
-                break
+            if index not in wanted:
+                continue
             frames.append(frame.to_image().convert("RGB"))
-            if total > 0 and len(frames) >= len(wanted):
+            if len(frames) >= len(wanted):
                 break
         if not frames:
             raise ValueError("VIDEO input contains no decodable frames")

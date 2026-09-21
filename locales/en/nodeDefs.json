@@ -1,14 +1,14 @@
 {
   "Qwen38VLLoader": {
-    "display_name": "Qwen3.8 VL Local Loader",
-    "description": "Loads a local Qwen3.8 GGUF model and its vision projector with CUDA llama.cpp.",
+    "display_name": "Qwen3.8 Model Loader · Tank",
+    "description": "Select a local Qwen3.8 GGUF and matching vision projector. Weights load when Local Multimodal Chat · Tank runs.",
     "inputs": {
       "model_file": {
-        "name": "main model file",
+        "name": "model file (GGUF)",
         "tooltip": "Main Qwen3.8 GGUF model file. Q4_K_M is a practical starting point for 32 GB VRAM."
       },
       "mmproj_file": {
-        "name": "vision projector",
+        "name": "projector file (mmproj)",
         "tooltip": "Vision projector GGUF required to understand images and video frames."
       },
       "batch_size": {
@@ -30,17 +30,17 @@
     },
     "outputs": {
       "0": {
-        "name": "backend",
-        "tooltip": "Loaded local Qwen3.8 VL backend for the Vision LLM Chat node."
+        "name": "model configuration",
+        "tooltip": "Prepared model configuration; connect Local Multimodal Chat · Tank. Weights are not loaded yet."
       },
       "1": {
-        "name": "backend info",
-        "tooltip": "Resolved main model, vision projector, GPU-layer setting, and backend state."
+        "name": "model info",
+        "tooltip": "Model, projector, source and recommended pair, GPU layers and loading state. Pairing information is based on filenames, not file validation."
       }
     }
   },
   "VisionAPIEnv": {
-    "display_name": "OpenAI-Compatible API · Environment Variable",
+    "display_name": "API Chat (Environment Key) · Tank",
     "description": "Sends one text, image, image-batch, video-frame, or VIDEO request using an API key from an environment variable.",
     "inputs": {
       "base_url": {
@@ -48,7 +48,7 @@
         "tooltip": "OpenAI-compatible API base URL; do not include /chat/completions. The environment-key node only permits the administrator's host allow-list."
       },
       "model": {
-        "name": "model",
+        "name": "model ID",
         "tooltip": "Exact model ID exposed by the API provider."
       },
       "api_key_env": {
@@ -81,14 +81,14 @@
       },
       "max_video_frames": {
         "name": "max video frames",
-        "tooltip": "Maximum number of evenly sampled frames used when a VIDEO input is converted to frames. It does not limit an IMAGE batch."
+        "tooltip": "Sample at most this many frames from video or video frames. Every image in the image input is still sent."
       },
       "video_transport": {
         "name": "video transport",
-        "tooltip": "Choose sampled image frames, native video_url, or automatic native-video fallback. The provider must support the selected format."
+        "tooltip": "frames samples the video; video_url sends native video; auto falls back to frames only when encoding fails. Provider format support is still required."
       },
       "image": {
-        "name": "optional image or batch",
+        "name": "image / image batch",
         "tooltip": "One still image or an IMAGE batch; every item is sent in the same API request."
       },
       "video_frames": {
@@ -112,11 +112,19 @@
       "2": {
         "name": "stats",
         "tooltip": "Request timing and backend information."
+      },
+      "3": {
+        "name": "reasoning",
+        "tooltip": "Reasoning text returned by the provider; empty when unavailable."
+      },
+      "4": {
+        "name": "raw response",
+        "tooltip": "Original assistant content or complete tool-call message."
       }
     }
   },
   "VisionAPIDirect": {
-    "display_name": "OpenAI-Compatible API · Direct Key",
+    "display_name": "API Chat (Direct Key) · Tank",
     "description": "Sends one text, image, image-batch, video-frame, or VIDEO request using a key entered in the node.",
     "inputs": {
       "base_url": {
@@ -124,7 +132,7 @@
         "tooltip": "OpenAI-compatible API base URL; do not include /chat/completions."
       },
       "model": {
-        "name": "model",
+        "name": "model ID",
         "tooltip": "Exact model ID exposed by the API provider."
       },
       "api_key": {
@@ -157,14 +165,14 @@
       },
       "max_video_frames": {
         "name": "max video frames",
-        "tooltip": "Maximum number of evenly sampled frames used when a VIDEO input is converted to frames. It does not limit an IMAGE batch."
+        "tooltip": "Sample at most this many frames from video or video frames. Every image in the image input is still sent."
       },
       "video_transport": {
         "name": "video transport",
-        "tooltip": "Choose sampled image frames, native video_url, or automatic native-video fallback. The provider must support the selected format."
+        "tooltip": "frames samples the video; video_url sends native video; auto falls back to frames only when encoding fails. Provider format support is still required."
       },
       "image": {
-        "name": "optional image or batch",
+        "name": "image / image batch",
         "tooltip": "One still image or an IMAGE batch; every item is sent in the same API request."
       },
       "video_frames": {
@@ -188,16 +196,24 @@
       "2": {
         "name": "stats",
         "tooltip": "Request timing and backend information."
+      },
+      "3": {
+        "name": "reasoning",
+        "tooltip": "Reasoning text returned by the provider; empty when unavailable."
+      },
+      "4": {
+        "name": "raw response",
+        "tooltip": "Original assistant content or complete tool-call message."
       }
     }
   },
   "VisionChat": {
-    "display_name": "Vision LLM Chat",
-    "description": "Sends text, images, or video to either a local model or an OpenAI-compatible API backend.",
+    "display_name": "Local Multimodal Chat · Tank",
+    "description": "One local text, image, image-batch or video request. Conversation history is not stored between runs.",
     "inputs": {
       "backend": {
-        "name": "backend",
-        "tooltip": "Connect the Qwen3.8 VL local loader or any OpenAI-compatible API backend."
+        "name": "model configuration",
+        "tooltip": "Connect Qwen3.8 Model Loader · Tank. API Chat nodes output text directly."
       },
       "system_prompt": {
         "name": "persona / system prompt",
@@ -209,7 +225,7 @@
       },
       "thinking_mode": {
         "name": "reasoning effort",
-        "tooltip": "Reasoning control: auto preserves the previous/default behavior; off disables thinking; low, medium, high, xhigh, and max are the five unified effort tiers. Local Qwen3.8 natively supports low, medium, and xhigh, so high maps to medium and max maps to xhigh."
+        "tooltip": "auto preserves the previous local default: thinking off. off explicitly disables thinking. Local high maps to medium and max maps to xhigh. Statistics show both selected and effective settings."
       },
       "context_length": {
         "name": "context length",
@@ -245,18 +261,18 @@
       },
       "max_video_frames": {
         "name": "max video frames",
-        "tooltip": "Maximum number of evenly sampled frames used when a VIDEO input is converted to frames. It does not limit an IMAGE batch."
+        "tooltip": "Sample at most this many frames from video or video frames. Every image in the image input is still sent."
       },
       "video_transport": {
         "name": "video transport",
-        "tooltip": "For API backends, choose automatic native video when available, sampled image frames, or native video_url. Local models always use frames."
+        "tooltip": "Compatibility option: local models always sample frames. Saved values are retained."
       },
       "unload_after": {
         "name": "unload after",
         "tooltip": "Release this backend after generation. Enable to recover VRAM; disable for faster repeated chats."
       },
       "image": {
-        "name": "image",
+        "name": "image / image batch",
         "tooltip": "One still image or an IMAGE batch of still images."
       },
       "video_frames": {
@@ -292,12 +308,16 @@
     }
   },
   "VisionUnload": {
-    "display_name": "Backend Unload",
-    "description": "Explicitly unloads a local model or closes an API client.",
+    "display_name": "Unload Model · Tank",
+    "description": "Release a local model. Connect the chat response to after to run after generation, or enable unload after on the chat node.",
     "inputs": {
       "backend": {
-        "name": "backend",
-        "tooltip": "Backend instance to unload or close."
+        "name": "model configuration",
+        "tooltip": "Connect the local model loader."
+      },
+      "after": {
+        "name": "after",
+        "tooltip": "Optional: connect the chat response to release the model after that chat completes."
       }
     },
     "outputs": {

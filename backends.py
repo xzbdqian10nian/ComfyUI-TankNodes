@@ -1,8 +1,8 @@
-"""Backend adapters for the ComfyUI Qwen3.8 VL plugin.
+"""Backend adapters for TankNodes.
 
 The node layer deliberately talks to a very small interface (``complete`` and
 ``unload``).  This keeps local llama.cpp models and OpenAI-compatible APIs
-interchangeable inside the same workflow.
+reusable by the local and direct API node entry points.
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ def _free_comfy_vram() -> None:
         mm.unload_all_models()
         mm.soft_empty_cache()
     except Exception as exc:
-        print(f"[ComfyUI-Qwen3.8-VL] ComfyUI VRAM cleanup skipped: {exc}")
+        print(f"[TankNodes] ComfyUI VRAM cleanup skipped: {exc}")
     gc.collect()
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
@@ -157,6 +157,7 @@ class LocalQwen38Backend:
         self.thinking_mode = "auto"
         self.thinking = False
         self.reasoning_effort = None
+        self.reasoning_effort_supported = True
         self.llm = None
         self.chat_handler = None
         self._lock = threading.RLock()
@@ -177,7 +178,7 @@ class LocalQwen38Backend:
         with self._lock:
             if self.llm is not None and self.n_ctx != n_ctx:
                 print(
-                    "[ComfyUI-Qwen3.8-VL] Chat context changed; "
+                    "[TankNodes] Chat context changed; "
                     "reloading the local model"
                 )
                 self.unload()
@@ -206,7 +207,7 @@ class LocalQwen38Backend:
             previous = _ACTIVE_LOCAL_BACKEND() if _ACTIVE_LOCAL_BACKEND is not None else None
             if previous is not None and previous is not self:
                 print(
-                    "[ComfyUI-Qwen3.8-VL] Model selection changed; "
+                    "[TankNodes] Model selection changed; "
                     "unloading the previous local model first"
                 )
                 previous.unload()
@@ -236,6 +237,7 @@ class LocalQwen38Backend:
                 "reasoning_effort": self.reasoning_effort,
             }
         try:
+            self.reasoning_effort_supported = True
             handler = Qwen35ChatHandler(**handler_kwargs)
         except TypeError as exc:
             # Older compatible wheels may not expose extra template
@@ -247,8 +249,9 @@ class LocalQwen38Backend:
             ):
                 raise
             handler_kwargs.pop("extra_template_arguments", None)
+            self.reasoning_effort_supported = False
             print(
-                "[ComfyUI-Qwen3.8-VL] This llama-cpp-python build does not "
+                "[TankNodes] This llama-cpp-python build does not "
                 f"accept reasoning effort; using thinking on/off only: {exc}",
                 flush=True,
             )
@@ -266,6 +269,15 @@ class LocalQwen38Backend:
         return handler
 
     def ensure_loaded(self, progress_callback=None) -> None:
+        """Own cleanup for every failed load, including cancellation."""
+        with self._lock:
+            try:
+                self._load_model(progress_callback)
+            except BaseException:
+                self.unload()
+                raise
+
+    def _load_model(self, progress_callback=None) -> None:
         with self._lock:
             if self.llm is not None:
                 if callable(progress_callback):
@@ -286,7 +298,7 @@ class LocalQwen38Backend:
 
             started = time.perf_counter()
             print(
-                "[ComfyUI-Qwen3.8-VL] Loading "
+                "[TankNodes] Loading "
                 f"{self.settings.model_path.name}, ctx={self.n_ctx}, "
                 f"gpu_layers={self.settings.n_gpu_layers}"
             )
@@ -313,7 +325,7 @@ class LocalQwen38Backend:
                         progress_callback(f"weights_wait:{elapsed:.0f}", 0.25)
                     else:
                         print(
-                            "[ComfyUI-Qwen3.8-VL] Loading weights still in progress "
+                            "[TankNodes] Loading weights still in progress "
                             f"({elapsed:.0f}s elapsed; llama.cpp has no byte-level callback)",
                             flush=True,
                         )
@@ -366,15 +378,31 @@ class LocalQwen38Backend:
             self.load_seconds = time.perf_counter() - started
             if callable(progress_callback):
                 progress_callback("ready", 1.0)
-            print(f"[ComfyUI-Qwen3.8-VL] Local model loaded in {self.load_seconds:.1f}s")
+            print(f"[TankNodes] Local model loaded in {self.load_seconds:.1f}s")
 
     def complete(self, **kwargs):
+        if kwargs.get("stream"):
+            return self._stream_completion(kwargs)
         with self._lock:
             # Internal ComfyUI execution metadata must never be forwarded to
             # llama.cpp as a generation option.
             kwargs.pop("_comfy_node_id", None)
             self.ensure_loaded()
             return self.llm.create_chat_completion(**kwargs)
+
+    def _stream_completion(self, kwargs):
+        # A llama.cpp stream is lazy. Hold the model lock while consuming it,
+        # not only while constructing the generator.
+        with self._lock:
+            kwargs.pop("_comfy_node_id", None)
+            self.ensure_loaded()
+            stream = self.llm.create_chat_completion(**kwargs)
+            try:
+                yield from stream
+            finally:
+                close = getattr(stream, "close", None)
+                if callable(close):
+                    close()
 
     def info(self) -> str:
         reasoning = self.reasoning_info()
@@ -389,6 +417,8 @@ class LocalQwen38Backend:
 
     def reasoning_info(self) -> str:
         effective = self.reasoning_effort or ("off" if not self.thinking else "on")
+        if self.thinking and not self.reasoning_effort_supported:
+            effective = "on (runtime supports on/off only)"
         return f"reasoning_choice={self.thinking_mode}\nreasoning_effective={effective}"
 
     def unload(self) -> None:
@@ -413,7 +443,7 @@ class LocalQwen38Backend:
                 active = _ACTIVE_LOCAL_BACKEND() if _ACTIVE_LOCAL_BACKEND is not None else None
                 if active is self:
                     _ACTIVE_LOCAL_BACKEND = None
-            print("[ComfyUI-Qwen3.8-VL] Local model unloaded")
+            print("[TankNodes] Local model unloaded")
 
     def __del__(self):
         try:
@@ -465,6 +495,7 @@ class OpenAICompatibleBackend:
         if restrict_endpoint:
             _validate_env_api_endpoint(self.base_url)
         self.api_key = api_key.strip() or os.getenv(self.api_key_env, "")
+        self.key_source = "direct" if api_key.strip() else (self.api_key_env or "none")
         self.model = model.strip()
         self.timeout = max(1.0, float(timeout))
         self.organization = organization.strip()
@@ -624,10 +655,9 @@ class OpenAICompatibleBackend:
             raise BackendError(f"OpenAI-compatible API request failed: {exc}") from exc
 
     def info(self) -> str:
-        key_source = "direct" if self.api_key else (self.api_key_env or "none")
         return (
             f"backend=openai_compatible\nbase_url={self.base_url}\n"
-            f"model={self.model}\ntimeout={self.timeout:.1f}s\nkey_source={key_source}\n"
+            f"model={self.model}\ntimeout={self.timeout:.1f}s\nkey_source={self.key_source}\n"
             f"{self.reasoning_info()}"
         )
 

@@ -1,9 +1,4 @@
-"""Model discovery helpers for the ComfyUI Qwen3.8 VL nodes.
-
-The visible ComfyUI nodes live in :mod:`generic_nodes`. This module only
-handles model catalogues and safe path resolution; it does not register a
-second set of nodes.
-"""
+"""Local GGUF discovery and descriptive catalogue data for TankNodes."""
 
 from __future__ import annotations
 
@@ -23,6 +18,10 @@ CATALOG_PATH = PLUGIN_DIR / "models.json"
 DEFAULT_MODEL_SUBDIR = Path("LLM/Qwen3.8")
 DEFAULT_MODEL = "Qwen3.8-27B-UD-Q4_K_M.gguf"
 DEFAULT_MMPROJ = "mmproj-BF16.gguf"
+MISSING_FILES = {
+    "model": "(No model found / 未找到主模型)",
+    "mmproj": "(No projector found / 未找到视觉投影)",
+}
 
 
 def _load_catalog() -> dict[str, Any]:
@@ -48,31 +47,35 @@ def _model_root() -> Path:
 
 
 def _is_complete_file(path: Path) -> bool:
-    return path.is_file() and path.stat().st_size > 1024 * 1024 and not Path(f"{path}.aria2").exists()
+    try:
+        return path.is_file() and path.stat().st_size > 1024 * 1024 and not Path(f"{path}.aria2").exists()
+    except OSError:
+        return False
 
 
 def _choices(kind: str) -> list[str]:
     """Return available GGUF filenames, with the catalogue default first."""
     root = _model_root()
-    pattern = "*mmproj*.gguf" if kind == "mmproj" else "*.gguf"
     found: list[str] = []
     if root.exists():
-        for path in root.glob(pattern):
+        for path in root.rglob("*"):
+            if path.suffix.lower() != ".gguf":
+                continue
+            if ("mmproj" in path.name.lower()) != (kind == "mmproj"):
+                continue
             if _is_complete_file(path):
-                if kind == "model" and "mmproj" in path.name.lower():
-                    continue
-                found.append(path.name)
+                found.append(path.relative_to(root).as_posix())
 
     preferred = DEFAULT_MMPROJ if kind == "mmproj" else DEFAULT_MODEL
     configured = CATALOG.get("default_mmproj" if kind == "mmproj" else "default_model", preferred)
     ordered = sorted(set(found), key=lambda name: (name != configured, name.lower()))
-    return ordered or [configured]
+    return ordered or [MISSING_FILES[kind]]
 
 
 def _resolve_file(filename: str, kind: str) -> Path:
     """Resolve a selected model file and reject incomplete downloads."""
     if not filename or filename.startswith("("):
-        raise FileNotFoundError(f"No {kind} file selected")
+        raise FileNotFoundError(f"No {kind} file found. Add matching GGUF files to {_model_root()} and refresh the model list.")
     path = Path(filename).expanduser()
     if not path.is_absolute():
         path = _model_root() / path
@@ -80,9 +83,23 @@ def _resolve_file(filename: str, kind: str) -> Path:
         raise RuntimeError(f"{kind} is still downloading: {path}")
     if not path.is_file():
         raise FileNotFoundError(f"{kind} not found: {path}")
+    if path.stat().st_size <= 1024 * 1024:
+        raise RuntimeError(f"{kind} is incomplete or too small to be a model: {path}")
     # Keep ComfyUI's configured path instead of exposing the target of a
     # platform-specific storage symlink in errors and status messages.
     return path.absolute()
 
 
-__all__ = ["_choices", "_resolve_file"]
+def selection_info(model_file: str, mmproj_file: str) -> str:
+    """Describe known releases without rewriting the selected file paths."""
+    name = Path(model_file).name
+    for source in CATALOG.get("sources", []):
+        if name in {source.get("model"), source.get("alternative_model")}:
+            expected = source.get("mmproj", "")
+            return (
+                f"source={source.get('repo', '')}\n"
+                f"variant={source.get('name', '')}\n"
+                f"recommended_mmproj={expected}\n"
+                f"projector_filename_match={Path(mmproj_file).name == expected}"
+            )
+    return "source=unlisted local file; verify model/projector compatibility"

@@ -1,13 +1,25 @@
-"""ComfyUI Qwen3.8 VL and OpenAI-compatible vision LLM nodes."""
+"""TankNodes: local multimodal models and OpenAI-compatible API tools."""
 
-from .generic_nodes import (
-    NODE_CLASS_MAPPINGS as GENERIC_NODE_CLASS_MAPPINGS,
-    NODE_DISPLAY_NAME_MAPPINGS as GENERIC_NODE_DISPLAY_NAME_MAPPINGS,
-)
+from .api_nodes import VisionAPIDirect, VisionAPIEnv
+from .local_nodes import Qwen38VLLoader, VisionChat, VisionUnload
 
-# Register one clear Qwen3.8 VL node set. Model discovery helpers are kept
-# separate and do not register any additional nodes.
-NODE_CLASS_MAPPINGS = dict(GENERIC_NODE_CLASS_MAPPINGS)
-NODE_DISPLAY_NAME_MAPPINGS = dict(GENERIC_NODE_DISPLAY_NAME_MAPPINGS)
+# These are persisted in existing workflows. Branding must not change them.
+NODE_CLASS_MAPPINGS = {
+    "Qwen38VLLoader": Qwen38VLLoader,
+    "VisionAPIEnv": VisionAPIEnv,
+    "VisionAPIDirect": VisionAPIDirect,
+    "VisionChat": VisionChat,
+    "VisionUnload": VisionUnload,
+}
 
-__all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]
+NODE_DISPLAY_NAME_MAPPINGS = {
+    "Qwen38VLLoader": "Qwen3.8 Model Loader · Tank",
+    "VisionAPIEnv": "API Chat (Environment Key) · Tank",
+    "VisionAPIDirect": "API Chat (Direct Key) · Tank",
+    "VisionChat": "Local Multimodal Chat · Tank",
+    "VisionUnload": "Unload Model · Tank",
+}
+
+WEB_DIRECTORY = "./web"
+
+__all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS", "WEB_DIRECTORY"]

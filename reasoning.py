@@ -36,6 +36,13 @@ def normalize_reasoning_choice(value: str | None) -> str:
     return choice if choice in REASONING_CHOICES else "auto"
 
 
+def validate_reasoning_choice(value: str | None) -> bool | str:
+    """Allow legacy API prompts through ComfyUI's combo validation."""
+    if value is None or str(value).strip().lower() in {*REASONING_CHOICES, *_LEGACY_CHOICES}:
+        return True
+    return f"Unknown reasoning setting: {value}"
+
+
 def is_qwen38_model(model: str | None) -> bool:
     """Best-effort model-id check for Qwen3.8's three native effort tiers."""
     compact = str(model or "").lower().replace("_", "").replace("-", "").replace(".", "")

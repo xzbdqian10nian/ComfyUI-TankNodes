@@ -1,86 +1,54 @@
-# Qwen3.8 VL for ComfyUI
+# TankNodes
 
 [English](README.md) | [简体中文](README_zh-CN.md)
 
-A ComfyUI custom-node pack for local Qwen3.8 VL inference through GGUF/`llama.cpp`, plus simple OpenAI-compatible image/video API backends. The local and API backends share one chat node, so the same text, image, and video workflow can be switched between backends.
+A personal ComfyUI toolkit by **Tank / xzbd**. It provides local Qwen3.8 multimodal inference and direct OpenAI-compatible API chat. All node titles end in **· Tank**, under **TankNodes** in the node menu.
 
-> This is an independent community project. Qwen3.8 model weights are not included.
+Local workflows use **model loader → local chat**. The two API Chat nodes make requests directly and return text; they do not connect to the local chat node. Media conversion and response processing are shared internally.
 
 ## Quick start
 
-From the ComfyUI installation directory:
+From `ComfyUI/custom_nodes`:
 
 ```bash
-cd ComfyUI/custom_nodes
 git clone https://github.com/xzbdqian10nian/ComfyUI-Qwen3.8-VL.git
 ```
 
-1. Put one matching GGUF main model and its `mmproj` projector in:
+The repository URL, installation directory, Registry package ID `qwen38-vl`, and internal node IDs remain unchanged for upgrades. TankNodes is the display name; install one copy of the plugin.
 
-   ```text
-   ComfyUI/models/LLM/Qwen3.8/
-   ```
+1. Put a GGUF main model and its matching vision projector under `ComfyUI/models/LLM/Qwen3.8/`. Subfolders are supported. `QWEN38_MODEL_DIR` can override this directory.
+2. Restart ComfyUI and refresh the browser.
+3. Add **Qwen3.8 Model Loader · Tank** and select the two files. Empty directories show an explicit missing-model option.
+4. Connect its **model configuration** output to **Local Multimodal Chat · Tank**.
+5. Enter a persona and prompt, optionally connect images or video, and run. Weights load when chat executes.
 
-2. Restart ComfyUI (or refresh the browser after the server has loaded the node pack).
-3. Add `Qwen3.8 VL Local Loader` and select the main model and projector.
-4. Connect its `backend` output to `Vision LLM Chat`.
-5. Enter a prompt and queue the workflow. For images, connect an `IMAGE` input; for videos, connect `VIDEO` or an `IMAGE` frame batch.
+For API use, add either API Chat node, enter a base URL, exact **model ID**, key source and prompt. Local GGUF weights are not required.
 
-The loader uses ComfyUI's configured model directory, so the same node pack works with normal ComfyUI installs, portable builds, and cloud images. `QWEN38_MODEL_DIR` is an optional override for users who deliberately keep this model in a separate directory.
-
-### Update
+### Updating
 
 ```bash
 git -C ComfyUI-Qwen3.8-VL pull --ff-only
 ```
 
-Restart ComfyUI after updating.
+Run this from the parent of the existing plugin folder, or run `git pull --ff-only` inside that folder. Restart ComfyUI and refresh the browser after updating.
 
 ## Nodes
 
 | Node | Purpose |
 | --- | --- |
-| `Qwen3.8 VL Local Loader` | Loads a local Qwen3.8 GGUF model and matching vision projector. |
-| `OpenAI-Compatible API · Environment Variable` | Calls an OpenAI-compatible endpoint using an API-key environment variable. |
-| `OpenAI-Compatible API · Direct Key` | Calls an OpenAI-compatible endpoint using a key entered in the node. |
-| `Vision LLM Chat` | Sends text, images, image batches, video frames, or ComfyUI `VIDEO` to the selected backend. |
-| `Backend Unload` | Explicitly releases a local model or closes an API backend. |
+| Qwen3.8 Model Loader · Tank | Select GGUF files and prepare a local model configuration. |
+| Local Multimodal Chat · Tank | One text, image, image-batch or video request using the local model. |
+| API Chat (Environment Key) · Tank | Direct API request using a server environment variable. |
+| API Chat (Direct Key) · Tank | Direct API request using a key entered in the node. |
+| Unload Model · Tank | Release the model; connect a chat response to **after** to run after that chat. |
 
-The node names are backend-neutral: the local loader is Qwen3.8-specific, while the API nodes can call any compatible vision endpoint.
+Each run is a separate request, with no automatic conversation history. Common inputs stay visible. Sampling, context and transport controls are marked as native **advanced** inputs; ComfyUI Nodes 2.0 can expand/collapse them, while the classic canvas displays them together. Widget order and saved values are unchanged. Local `video_transport` remains as an advanced compatibility field; local models always sample frames.
 
-## Local Qwen3.8 VL model
+For a single chat, **unload after** is the simplest way to release VRAM. The separate unload node's optional **after** connection establishes an explicit dependency when needed.
 
-The local backend expects two compatible files:
+## Models and reasoning
 
-```text
-ComfyUI/models/LLM/Qwen3.8/
-├── <Qwen3.8 main model>.gguf
-└── <matching mmproj>.gguf
-```
-
-The main model contains the language-model weights. The `mmproj` file is the vision projector required for image and video understanding. Keep both files from the same model release and do not mix projectors between publishers.
-
-For a 32 GB card, start with `Q4_K_M` or an equivalent UD Q4 variant. Q6/Q8 variants need more VRAM. The loader exposes context length, batch size, micro-batch size, GPU layers, and ComfyUI VRAM cleanup; these settings are intentionally kept in the loader/chat nodes rather than hidden in a platform-specific launcher.
-
-### Reasoning effort
-
-`Vision LLM Chat` and both API nodes expose one unified selector:
-
-- `auto`: keep the previous/provider-default behavior;
-- `off`: request a direct non-thinking response;
-- `low`, `medium`, `high`, `xhigh`, `max`: the five active reasoning-effort tiers commonly used by current APIs.
-
-The selected and effective values are included in the node statistics. The
-five-tier UI is shared across backends, but a model may support only a subset.
-[Qwen3.8-27B officially supports](https://huggingface.co/Qwen/Qwen3.8-27B)
-`low`, `medium`, and `xhigh`; for local Qwen3.8 inference this plugin safely
-maps `high` to `medium` and `max` to `xhigh` instead of sending a value that
-the model template rejects. Changing local reasoning effort updates the chat
-template without reloading model weights.
-
-### Model downloads
-
-These are community GGUF distributions of Qwen3.8-27B. Download only the files you need.
+Use a main model and projector from the same release. Selections retain real filenames, not marketing labels. The loader's **model info** includes known source, variant, recommended projector and filename-match status. Filename matching is informational, not a checksum or architecture check; arbitrary renamed files cannot be identified reliably.
 
 | Source | Typical files | Difference |
 | --- | --- | --- |
@@ -88,124 +56,66 @@ These are community GGUF distributions of Qwen3.8-27B. Download only the files y
 | [Huihui AI Abliterated](https://huggingface.co/huihui-ai/Huihui-Qwen3.8-27B-abliterated-GGUF) | [Q4_K](https://huggingface.co/huihui-ai/Huihui-Qwen3.8-27B-abliterated-GGUF/resolve/main/Huihui-Qwen3.8-27B-abliterated-Q4_K.gguf?download=true) or Q4_K_L + `mmproj-model-bf16.gguf` | A community low-refusal variant; larger Q4_K_L retains more high-precision tensors. |
 | [Orcarouter Uncensored](https://huggingface.co/orcarouter/Qwen3.8-27B-Uncensored-GGUF) | [Q4_K_M](https://huggingface.co/orcarouter/Qwen3.8-27B-Uncensored-GGUF/resolve/main/Qwen3.8-27B-Uncensored-Q4_K_M.gguf?download=true) + [mmproj f16](https://huggingface.co/orcarouter/Qwen3.8-27B-Uncensored-GGUF/resolve/main/mmproj-Qwen3.8-27B-Uncensored-f16.gguf?download=true) | Another community low-refusal variant. Hugging Face access conditions may apply. |
 
-Community variants can differ in alignment, refusal behavior, quality, and licensing. Review each model card before redistribution or public deployment.
+These are the existing catalogue entries. Review each source's current files and model card before downloading. Model weights are not included or downloaded automatically.
 
-## API backends
+The reasoning selector retains `auto`, `off`, `low`, `medium`, `high`, `xhigh`, `max`:
 
-Both API nodes send a small OpenAI Chat Completions-compatible request. Configure:
+- Local `auto` preserves the old non-thinking default; `off` explicitly disables thinking.
+- The local Qwen3.8 adapter maps `high` to `medium` and `max` to `xhigh`. Statistics report selected and effective values. Switching effort does not reload weights; changing context length does.
+- API `auto` leaves provider reasoning defaults unchanged. Other settings follow the current provider adapter; support varies by endpoint. An older llama.cpp runtime that only supports on/off is reported as such.
 
-- `base_url`: the provider's API root, for example `https://api.openai.com/v1`;
-- `model`: the provider's model ID;
-- `prompt`: the user instruction;
-- `image`: an optional single image or `IMAGE` batch;
-- `video_frames` or `video`: optional video input, depending on provider support.
+## Images and video
 
-For API nodes, `video_frames` is an `IMAGE` batch and works with providers that
-accept multiple `image_url` parts. `video` is the native ComfyUI `VIDEO` object.
-Use `video_transport = frames` for the broadest compatibility, `video_url` for
-providers that implement the common OpenAI-compatible `video_url` content part,
-or `auto` to try native video when it can be encoded and otherwise send sampled
-frames. The provider still has to support the selected content format.
+The **image** input sends every image in the batch. The **video frames** input samples an IMAGE batch up to **max video frames**. The **video** input samples across the whole video, including containers without a frame count; those need a counting pass before sampling. Images are not silently resized.
 
-### Environment-variable key
+API `frames` sends sampled images; `video_url` sends native video. `auto` falls back to frames when local encoding fails, not when a provider rejects the request. The provider must support the format. Native uploads preserve the actual container MIME type. Statistics distinguish image count, sampled frame count and native video count; when token usage is unavailable, throughput is `n/a`.
 
-Set the variable before starting ComfyUI:
+## API settings and outputs
+
+- **base URL**: the API root, for example `https://api.openai.com/v1`, without `/chat/completions`.
+- **model ID**: the provider's exact identifier, not a translated display name.
+- **max output tokens = 0**: omit the limit and use the provider default.
+- **temperature = 0**: omit the API parameter. Local temperature 0 retains its existing deterministic-sampling meaning.
+- **seed**: sent when configured; provider support varies.
+
+API outputs keep their existing first three positions: **response**, **usage**, **stats**. **reasoning** and **raw response** are appended at positions 4 and 5. Reasoning is empty when the provider does not return it. The usage JSON preserves the two legacy string-valued token fields. Local outputs remain **response / reasoning / raw response / stats**.
+
+### Environment key
+
+Set the variable before starting ComfyUI and enter only its name in the node:
 
 ```bash
 export OPENAI_API_KEY='your-api-key'
 ```
 
-In `OpenAI-Compatible API · Environment Variable`, enter `OPENAI_API_KEY` as `api_key_env`, not the secret itself.
-
-### Direct key
-
-Use `OpenAI-Compatible API · Direct Key` when a temporary key is more convenient. Do not save a real key in a public workflow or commit it to Git.
-
-### Parameters
-
-- `max_tokens = 0`: omit `max_tokens` and use the provider default.
-- `temperature = 0`: omit `temperature` and use the provider default.
-- `seed`: pass a seed when the provider supports it.
-- `reasoning effort`: choose `auto`, `off`, or one of the five unified active tiers; the provider may map or reject tiers it does not support.
-- API progress is conservative when the provider does not expose a total output limit; it advances gradually and completes at the end of a normal response.
-
-### Environment-key endpoint security
-
-The environment-variable node never sends a server-side key to an arbitrary
-workflow-supplied host. It accepts exact HTTPS host matches from the server-side
-allow-list; the default is `api.openai.com`. To allow another provider, set the
-following before starting ComfyUI:
+The server-side allow-list defaults to `api.openai.com` and loopback hosts. Other providers need an administrator-configured exact host or `host:port`:
 
 ```bash
 export COMFYUI_API_ALLOWED_HOSTS='api.openai.com,api.example.com'
 ```
 
-Entries are exact `host` or `host:port` values; wildcards are not accepted. The
-Direct Key node is separate and can use another endpoint because it sends only
-the key explicitly entered by the workflow user, never a server environment
-variable. Use HTTPS for public endpoints.
-
-## Images and video
-
-- Connect one image directly to `image`.
-- Connect an `IMAGE` batch to `image` to send multiple images in one request.
-- The plugin does not silently resize images or truncate an `IMAGE` batch. Add any resize or frame-limit node upstream when the workflow needs one.
-- Connect decoded video frames to `video_frames` for local inference or providers that accept image frames.
-- Connect ComfyUI `VIDEO` to `video` when the backend supports video transport; the plugin can sample frames according to `max_video_frames`.
+HTTPS is required except for loopback services. Direct Key uses only the explicitly entered key; do not save real keys in shared workflows. No author key or private endpoint is included.
 
 ## Example workflows
 
-The [`example_workflows/`](example_workflows/) directory contains five local-backend examples:
+Eight examples in [example_workflows](example_workflows/) cover text, a single image, multiple images, decoded video frames, native VIDEO, both API key modes and ordered model release. Local examples retain their original functional parameters. Instructions are bilingual; standard plugin-node titles follow the interface language.
 
-| File | Demonstrates |
-| --- | --- |
-| [`01_text_chat.json`](example_workflows/01_text_chat.json) | Text-only chat |
-| [`02_single_image.json`](example_workflows/02_single_image.json) | One image |
-| [`03_multiple_images.json`](example_workflows/03_multiple_images.json) | Multiple images as one `IMAGE` batch |
-| [`04_video_frames.json`](example_workflows/04_video_frames.json) | `VIDEO` decoded to image frames |
-| [`05_comfyui_video.json`](example_workflows/05_comfyui_video.json) | Native ComfyUI `VIDEO` input |
+## Existing workflows
 
-Each example includes a model/setup Markdown note and connects the chat response to ComfyUI's `Preview as Text` node. Replace the sample media with your own files, then select the model pair available in your model directory.
+The five internal node IDs, existing field names, widget order, original output indices, model paths and Registry package ID are retained. Old `backend_default / thinking / instruct` choices remain supported. The browser extension recognizes the previous 11-widget API layout and inserts the missing reasoning default without shifting video settings. User custom titles and links are preserved.
 
-## Compatibility and dependencies
+The extension also repairs evidenced v0.5.0 prompt-first layouts, with a marker preventing repeated swaps. It does not guess the meaning of text in ambiguous older layouts.
 
-- Python 3.10+.
-- CUDA-capable `llama-cpp-python` is required for local GGUF inference. Install a wheel matching the CUDA/runtime already used by your ComfyUI image.
-- API mode can use the existing `openai` SDK; a standard-library HTTP fallback is included.
-- The plugin does not replace PyTorch, CUDA, the NVIDIA driver, or the existing Python environment.
-- `requirements.txt` is intentionally limited to the plugin's small required dependency set.
+The rename is a display change, not a Registry or GitHub repository migration. Restart the server and refresh the browser together so the Python definitions and compatibility extension are from the same version.
 
-## ComfyUI Manager and Registry
+## Dependencies and development
 
-The repository includes Comfy Registry metadata in `pyproject.toml`, including a semantically versioned package name, repository URL, publisher ID, and display name. Once the package is published to the [Comfy Registry](https://registry.comfy.org), it can be discovered and installed from the current ComfyUI Manager. Until then, direct Git installation remains available:
+Python 3.10+; use the existing ComfyUI Torch environment. Local inference needs a compatible CUDA `llama-cpp-python` build. API mode uses the installed OpenAI SDK or the standard-library HTTP fallback. This plugin does not replace Torch, CUDA or GPU drivers. `requirements.txt` contains only the small additional runtime dependency.
 
-```bash
-git clone https://github.com/xzbdqian10nian/ComfyUI-Qwen3.8-VL.git
-```
+`__init__.py` registers nodes. `local_nodes.py` and `api_nodes.py` hold node interfaces. `chat.py` shares content/response processing; `backends.py` owns runtime adapters; `model_catalog.py`, `media.py`, `reasoning.py` and `progress.py` each cover one concern. `web/` contains only old-workflow compatibility, with no custom widget serialization.
 
-## Troubleshooting
-
-**The nodes do not appear**
-
-1. Confirm the repository is under `ComfyUI/custom_nodes/`.
-2. Check the ComfyUI console for the plugin import line.
-3. Hard-refresh the browser.
-4. Make sure no other copy of this plugin is enabled under a second folder.
-
-**The local loader has no model choices**
-
-Confirm that both `.gguf` files are inside `ComfyUI/models/LLM/Qwen3.8/`, are complete downloads, and that the projector filename contains `mmproj`.
-
-**The local model fails to load**
-
-Use a matching main-model/projector pair and verify that the installed `llama-cpp-python` wheel supports the current machine. Lower context length, batch size, or GPU layers if VRAM is insufficient.
-
-**An API request fails**
-
-Check the endpoint's `/v1` suffix, model ID, key source, provider vision support, and whether that provider accepts the requested image/video format.
+Development tests require pytest, Torch, NumPy, Pillow, PyAV and OpenAI in an isolated environment. See [tests/README.md](tests/README.md).
 
 ## Acknowledgements
 
-Thanks to the [Qwen Team](https://huggingface.co/Qwen) for [Qwen3.8-27B](https://huggingface.co/Qwen/Qwen3.8-27B), and to [Unsloth](https://huggingface.co/unsloth), [huihui-ai](https://huggingface.co/huihui-ai), and [orcarouter](https://huggingface.co/orcarouter) for community GGUF distributions.
-
-This project is independent and is not affiliated with or endorsed by the Qwen Team or the listed community publishers.
+Thanks to the Qwen team and the community GGUF publishers listed above. TankNodes is an independent project; it does not include model weights or imply endorsement by model providers.
