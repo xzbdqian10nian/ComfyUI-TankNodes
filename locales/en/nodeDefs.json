@@ -1,6 +1,6 @@
 {
   "Qwen38VLLoader": {
-    "display_name": "Qwen3.8 Model Loader · Tank",
+    "display_name": "Qwen / Bonsai GGUF Loader · Tank",
     "description": "Choose a main model and vision projector, then connect to local chat. Weights load when chat starts.",
     "inputs": {
       "model_file": {
@@ -225,7 +225,7 @@
       },
       "thinking_mode": {
         "name": "reasoning effort",
-        "tooltip": "auto preserves the previous local default: thinking off. off explicitly disables thinking. Local high maps to medium and max maps to xhigh. Statistics show both selected and effective settings."
+        "tooltip": "Qwen auto keeps thinking off; Bonsai auto uses off for text and low for images/video frames. off explicitly disables thinking. Local high maps to medium and max to xhigh."
       },
       "context_length": {
         "name": "context length",

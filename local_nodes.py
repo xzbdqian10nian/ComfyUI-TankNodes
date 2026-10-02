@@ -5,13 +5,14 @@ from typing import Any
 import torch
 
 from .backends import BackendError, LocalQwen38Backend, LocalRuntimeSettings
+from .bonsai_backend import LocalBonsaiBackend
 from .chat import _run_chat
-from .model_catalog import _choices, _resolve_file, selection_info
+from .model_catalog import BONSAI_MMPROJ, bonsai_variant, _choices, _resolve_file, selection_info
 from .progress import ConsoleProgressBar, StatusTicker, make_progress, send_status, update_progress
 from .reasoning import REASONING_CHOICES, validate_reasoning_choice
 
 class Qwen38VLLoader:
-    """Load the configured local Qwen3.8 GGUF backend."""
+    """Load a supported local GGUF backend."""
     RETURN_TYPES = ("VISION_LLM_BACKEND", "STRING")
     RETURN_NAMES = ("backend", "backend_info")
     OUTPUT_TOOLTIPS = (
@@ -19,7 +20,7 @@ class Qwen38VLLoader:
         "Resolved model, projector, GPU layers, and backend state.",
     )
     CATEGORY = "TankNodes/Local"
-    DESCRIPTION = "Choose a main model and vision projector, then connect to local chat. Weights load when chat starts."
+    DESCRIPTION = "Choose a Qwen3.8 or Ternary Bonsai GGUF and its vision projector, then connect to local chat."
     FUNCTION = "load_model"
 
     @classmethod
@@ -31,7 +32,7 @@ class Qwen38VLLoader:
                     models,
                     {
                         "default": models[0],
-                        "tooltip": "Main Qwen3.8 GGUF model file. Q4_K_M is a practical starting point for 32 GB VRAM.",
+                        "tooltip": "Main GGUF model. Bonsai PQ2_0 uses the PrismML llama-server runtime; Qwen GGUF uses llama-cpp-python.",
                     },
                 ),
                 "mmproj_file": (
@@ -102,16 +103,18 @@ class Qwen38VLLoader:
         send_status("Preparing local model backend…", unique_id)
         model_path = _resolve_file(model_file, "model")
         mmproj_path = _resolve_file(mmproj_file, "mmproj")
-        backend = LocalQwen38Backend(
-            LocalRuntimeSettings(
-                model_path=model_path,
-                mmproj_path=mmproj_path,
-                n_batch=int(batch_size),
-                n_ubatch=int(micro_batch_size),
-                n_gpu_layers=int(gpu_layers),
-                free_comfy_vram=bool(free_comfy_vram),
-            )
+        settings = LocalRuntimeSettings(
+            model_path=model_path,
+            mmproj_path=mmproj_path,
+            n_batch=int(batch_size),
+            n_ubatch=int(micro_batch_size),
+            n_gpu_layers=int(gpu_layers),
+            free_comfy_vram=bool(free_comfy_vram),
         )
+        variant = bonsai_variant(model_file)
+        if variant and mmproj_path.name != BONSAI_MMPROJ:
+            raise BackendError(f"Ternary Bonsai requires the matching projector: {BONSAI_MMPROJ}")
+        backend = LocalBonsaiBackend(settings, variant) if variant else LocalQwen38Backend(settings)
         send_status(f"Model configuration ready: {model_path.name}", unique_id)
         return backend, f"{backend.info()}\n{selection_info(model_file, mmproj_file)}"
 
@@ -124,7 +127,7 @@ class VisionChat:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "backend": ("VISION_LLM_BACKEND", {"tooltip": "Connect Qwen3.8 Model Loader · Tank. The API Chat nodes return text directly and do not connect here."}),
+                "backend": ("VISION_LLM_BACKEND", {"tooltip": "Connect Qwen / Bonsai GGUF Loader · Tank. The API Chat nodes return text directly and do not connect here."}),
                 "system_prompt": (
                     "STRING",
                     {"default": "You are a professional visual-understanding assistant running in ComfyUI. Answer accurately and directly.", "multiline": True, "tooltip": "Persona and system-level behavior or response-format instruction."},
@@ -133,7 +136,7 @@ class VisionChat:
                     "STRING",
                     {"default": "Please describe the input image or video in detail.", "multiline": True, "tooltip": "User instruction sent with the attached image/video content."},
                 ),
-                "thinking_mode": (list(REASONING_CHOICES), {"default": "auto", "tooltip": "Reasoning control: auto preserves the old/default behavior, off disables thinking, and low/medium/high/xhigh/max are the five unified effort tiers. Local Qwen3.8 natively supports low/medium/xhigh, so high maps to medium and max maps to xhigh."}),
+                "thinking_mode": (list(REASONING_CHOICES), {"default": "auto", "tooltip": "Qwen auto keeps thinking off; Bonsai auto uses off for text and low for images/video frames. Explicit low/medium/high/xhigh/max select an effort tier; high maps to medium and max to xhigh for these local models."}),
                 "context_length": (
                     "INT",
                     {"advanced": True,
@@ -141,7 +144,7 @@ class VisionChat:
                         "min": 2048,
                         "max": 262144,
                         "step": 1024,
-                        "tooltip": "Local llama.cpp context window for the prompt, media tokens, and response. API backends ignore it; changing it reloads a loaded local model.",
+                    "tooltip": "Local context window for prompt, media and response. Bonsai uses at least 16K to fit typical visual prompts; changing it reloads the model.",
                     },
                 ),
                 "max_tokens": ("INT", {"default": 4096, "min": 16, "max": 32768, "step": 16, "tooltip": "Maximum number of new text tokens to generate. This is only a limit; generation still stops when the model finishes its answer."}),

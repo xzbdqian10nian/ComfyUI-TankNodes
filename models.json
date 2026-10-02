@@ -25,7 +25,21 @@
       "model": "Qwen3.8-27B-Uncensored-Q4_K_M.gguf",
       "mmproj": "mmproj-Qwen3.8-27B-Uncensored-f16.gguf",
       "profile": "Orcarouter Uncensored GGUF; use this release’s mmproj-Qwen3.8-27B-Uncensored-f16.gguf."
+    },
+    {
+      "name": "Ternary Bonsai 2 27B · official · PQ2_0",
+      "repo": "prism-ml/Ternary-Bonsai-2-27B-gguf",
+      "model": "Ternary-Bonsai-2-27B-PQ2_0.gguf",
+      "mmproj": "Ternary-Bonsai-2-27B-mmproj-Q8_0.gguf",
+      "profile": "Requires PrismML llama-server. Prompt optimization defaults to 16K minimum context, Q8 KV, Flash Attention, and no MTP."
+    },
+    {
+      "name": "Ternary Bonsai 2 27B · Abliterated v2 · PQ2_0",
+      "repo": "BoldingBuilds/Ternary-Bonsai-2-27B-Abliterated-v2-PQ2_0-MTP-GGUF",
+      "model": "Ternary-Bonsai-2-27B-Abliterated-v2-PQ2_0-MTP.gguf",
+      "mmproj": "Ternary-Bonsai-2-27B-mmproj-Q8_0.gguf",
+      "profile": "Requires PrismML llama-server. The MTP weights are bundled, but MTP is off for measured Chinese creative tasks."
     }
   ],
-  "notes": "Files are read from ComfyUI/models/LLM/Qwen3.8 or QWEN38_MODEL_DIR. The tested pair is Unsloth UD-Q4_K_M with mmproj-BF16."
+  "notes": "Files are read from ComfyUI/models/LLM/Qwen3.8 or QWEN38_MODEL_DIR. Bonsai PQ2_0 runs through PrismML llama-server, not llama-cpp-python."
 }

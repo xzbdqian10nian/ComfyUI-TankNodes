@@ -1,5 +1,14 @@
 # TankNodes 更新记录 / Changelog
 
+## Unreleased — Ternary Bonsai 本地反推
+
+- 原有 `Qwen38VLLoader` 节点增加官方 Bonsai PQ2_0 与 Abliterated v2 选项，节点 ID、输入顺序和输出位置保持不变。
+- Bonsai 使用 PrismML `llama-server` 在本机回环地址按需加载；16K 起步、Flash Attention、Q8 KV、单并发，中文创作任务默认不启用 MTP。卸载节点与生成后卸载均可释放显存。
+- `auto` 对纯文字提示词优化关闭思考，对图片/视频帧使用 `low`。极少数随机种子导致的 1-token 空回答会换种子重试一次；思考耗尽输出预算时明确报错。
+- 已在 RTX 5090 上通过 ComfyUI 的文字和图片流程验证，包括 20,480 上下文下的 Abliterated v2 加载与视觉投影。
+
+The existing loader now supports official and abliterated-v2 Bonsai PQ2_0 through PrismML's local server while preserving saved node contracts. Short-context Flash Attention and Q8 KV are enabled; MTP stays off for the measured Chinese creative tasks. Auto reasoning uses off for text and low for images/frames. Empty one-token responses get one retry, while exhausted reasoning budgets produce an explicit error. Text and image workflows have been verified through ComfyUI on an RTX 5090, including abliterated-v2 loading and its vision projector at a 20,480-token context.
+
 ## 0.7.2 — API 中断 / API interruption
 
 - 两种 API 节点支持 ComfyUI 中断按钮，等待首个响应和接收输出时均可取消。

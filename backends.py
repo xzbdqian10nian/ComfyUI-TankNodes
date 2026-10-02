@@ -145,6 +145,25 @@ _ACTIVE_LOCAL_BACKEND_LOCK = threading.RLock()
 _ACTIVE_LOCAL_BACKEND: weakref.ReferenceType | None = None
 
 
+def claim_local_backend(backend: Any) -> None:
+    """Keep only one TankNodes local model resident on the GPU."""
+    global _ACTIVE_LOCAL_BACKEND
+    with _ACTIVE_LOCAL_BACKEND_LOCK:
+        previous = _ACTIVE_LOCAL_BACKEND() if _ACTIVE_LOCAL_BACKEND is not None else None
+        if previous is not None and previous is not backend:
+            print("[TankNodes] Model selection changed; unloading the previous local model first")
+            previous.unload()
+        _ACTIVE_LOCAL_BACKEND = weakref.ref(backend)
+
+
+def release_local_backend(backend: Any) -> None:
+    global _ACTIVE_LOCAL_BACKEND
+    with _ACTIVE_LOCAL_BACKEND_LOCK:
+        active = _ACTIVE_LOCAL_BACKEND() if _ACTIVE_LOCAL_BACKEND is not None else None
+        if active is backend:
+            _ACTIVE_LOCAL_BACKEND = None
+
+
 class LocalQwen38Backend:
     """Qwen3.8 GGUF + image/video projector through CUDA llama.cpp."""
 
@@ -201,16 +220,7 @@ class LocalQwen38Backend:
 
     def _claim_active_slot(self) -> None:
         """Unload another local VLM before this one allocates GPU memory."""
-        global _ACTIVE_LOCAL_BACKEND
-        with _ACTIVE_LOCAL_BACKEND_LOCK:
-            previous = _ACTIVE_LOCAL_BACKEND() if _ACTIVE_LOCAL_BACKEND is not None else None
-            if previous is not None and previous is not self:
-                print(
-                    "[TankNodes] Model selection changed; "
-                    "unloading the previous local model first"
-                )
-                previous.unload()
-            _ACTIVE_LOCAL_BACKEND = weakref.ref(self)
+        claim_local_backend(self)
 
     def _make_handler(self):
         try:

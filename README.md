@@ -2,7 +2,7 @@
 
 English · [简体中文](README_zh-CN.md)
 
-A collection of ComfyUI nodes by Tank. Use a local Qwen3.8 model for text, images and video, or call other models through an OpenAI-compatible API.
+A collection of ComfyUI nodes by Tank. Use local Qwen3.8 or Ternary Bonsai for text, images and video, or call other models through an OpenAI-compatible API.
 
 Search for **Tank** in the node menu.
 
@@ -10,7 +10,7 @@ Search for **Tank** in the node menu.
 
 | Node | Use |
 | --- | --- |
-| Qwen3.8 Model Loader · Tank | Select a main model and vision projector, then connect to local chat. |
+| Qwen / Bonsai GGUF Loader · Tank | Select a main model and matching vision projector, then connect to local chat. |
 | Local Multimodal Chat · Tank | Enter a prompt, optionally add images or video, and get a text response. |
 | API Chat (Environment Key) · Tank | Read an API key from a server environment variable. |
 | API Chat (Direct Key) · Tank | Enter an API key in the node. Clear it before sharing the workflow. |
@@ -28,7 +28,7 @@ git clone https://github.com/xzbdqian10nian/ComfyUI-TankNodes.git
 
 Restart ComfyUI and refresh the browser. Use Python 3.10 or newer. Install the extra dependencies in [requirements.txt](requirements.txt) with ComfyUI's own Python environment.
 
-Local inference also needs a `llama-cpp-python` build that supports Qwen3.8 and matches your CUDA runtime. API nodes do not need it. The plugin does not replace Torch, CUDA or GPU drivers.
+Local Qwen inference needs a `llama-cpp-python` build that supports Qwen3.8 and matches your CUDA runtime. Bonsai PQ2_0 instead needs PrismML's `llama-server`. API nodes do not need either local runtime. The plugin does not replace Torch, CUDA or GPU drivers.
 
 ## Quick start
 
@@ -39,6 +39,12 @@ Local inference also needs a `llama-cpp-python` build that supports Qwen3.8 and 
 The tested pair is `Qwen3.8-27B-UD-Q4_K_M.gguf` and `mmproj-BF16.gguf` from [Unsloth](https://huggingface.co/unsloth/Qwen3.8-27B-GGUF). Other catalogued files are listed in [models.json](models.json). Use a main model and projector from the same release.
 
 Subfolders are supported. Set `QWEN38_MODEL_DIR` to use another location. The plugin does not download weights; if the menu says no model was found, check the path and whether the download finished.
+
+## Ternary Bonsai for reverse prompting
+
+The loader also recognizes the official `Ternary-Bonsai-2-27B-PQ2_0.gguf` and `Ternary-Bonsai-2-27B-Abliterated-v2-PQ2_0-MTP.gguf`. Pair either with `Ternary-Bonsai-2-27B-mmproj-Q8_0.gguf` in the same model directory. The [official GGUF](https://huggingface.co/prism-ml/Ternary-Bonsai-2-27B-gguf) and [abliterated v2](https://huggingface.co/BoldingBuilds/Ternary-Bonsai-2-27B-Abliterated-v2-PQ2_0-MTP-GGUF) are separate choices. Install a PQ2_0-capable [PrismML llama.cpp](https://github.com/PrismML-Eng/llama.cpp) binary at `/root/bonsai-test/runtime/llama-server`, or set `BONSAI_LLAMA_SERVER` before starting ComfyUI. The plugin does not download models or the runtime.
+
+For a local Bonsai chat, the plugin starts a loopback server on demand without stopping ComfyUI. It uses at least 16K context, Flash Attention, Q8 KV cache, one concurrent slot and no MTP. In measured short Chinese creative tasks, MTP was slower; a filename containing MTP does not enable it. Bonsai `auto` disables thinking for text-only prompt polishing and uses `low` effort when images or video frames are attached. Select `medium` explicitly for harder requests and allow enough output tokens for the reasoning. A one-token empty answer gets one retry with another seed; reasoning that exhausts the output budget raises an explicit error. Keep the model loaded for repeated calls, or use **unload after** to free GPU memory for image generation. On one idle RTX 5090, either 16K variant used about 8.9 GiB and worked with ComfyUI still running. Single images, short text and a synthetic two-frame input were verified; full VIDEO objects and longer workflows need checks with actual material.
 
 ## Images and video
 
@@ -74,7 +80,7 @@ Use ComfyUI's interrupt button while waiting for an API response or receiving ou
 
 ## Useful settings
 
-- Local `auto` keeps thinking off. `off` explicitly disables it. API `auto` keeps the provider's default.
+- Local Qwen `auto` keeps thinking off. Bonsai `auto` uses no thinking for text and `low` for images/frames. `off` explicitly disables it. External API `auto` keeps the provider's default.
 - For local Qwen3.8, `high` runs as `medium` and `max` as `xhigh`. Stats show the effective setting. Changing reasoning effort keeps the model loaded; changing context length reloads it.
 - Keep the model loaded for repeated chats. Enable **unload after** if you need the GPU memory for another model.
 - Nodes 2.0 can collapse advanced inputs. The classic canvas shows them together.

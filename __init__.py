@@ -13,7 +13,7 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "Qwen38VLLoader": "Qwen3.8 Model Loader · Tank",
+    "Qwen38VLLoader": "Qwen / Bonsai GGUF Loader · Tank",
     "VisionAPIEnv": "API Chat (Environment Key) · Tank",
     "VisionAPIDirect": "API Chat (Direct Key) · Tank",
     "VisionChat": "Local Multimodal Chat · Tank",

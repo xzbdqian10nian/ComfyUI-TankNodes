@@ -18,6 +18,11 @@ CATALOG_PATH = PLUGIN_DIR / "models.json"
 DEFAULT_MODEL_SUBDIR = Path("LLM/Qwen3.8")
 DEFAULT_MODEL = "Qwen3.8-27B-UD-Q4_K_M.gguf"
 DEFAULT_MMPROJ = "mmproj-BF16.gguf"
+BONSAI_MMPROJ = "Ternary-Bonsai-2-27B-mmproj-Q8_0.gguf"
+BONSAI_MODELS = {
+    "Ternary-Bonsai-2-27B-PQ2_0.gguf": "stock",
+    "Ternary-Bonsai-2-27B-Abliterated-v2-PQ2_0-MTP.gguf": "abliterated_v2",
+}
 MISSING_FILES = {
     "model": "(No model found / 未找到主模型)",
     "mmproj": "(No projector found / 未找到视觉投影)",
@@ -103,3 +108,7 @@ def selection_info(model_file: str, mmproj_file: str) -> str:
                 f"projector_filename_match={Path(mmproj_file).name == expected}"
             )
     return "source=unlisted local file; verify model/projector compatibility"
+
+
+def bonsai_variant(model_file: str) -> str | None:
+    return BONSAI_MODELS.get(Path(model_file).name)

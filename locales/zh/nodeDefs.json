@@ -1,11 +1,11 @@
 {
   "Qwen38VLLoader": {
-    "display_name": "Qwen3.8 模型加载 · Tank",
-    "description": "选好主模型和视觉投影，再接到本地对话节点。模型会在对话开始时加载。",
+    "display_name": "Qwen / Bonsai 模型加载 · Tank",
+    "description": "选好 Qwen 或 Ternary Bonsai 主模型和配套视觉投影，再接到本地对话节点。模型会在对话开始时加载。",
     "inputs": {
       "model_file": {
         "name": "主模型文件（GGUF）",
-        "tooltip": "Qwen3.8 主模型 GGUF 文件。32GB 显存可先从 Q4_K_M 开始。"
+        "tooltip": "主模型 GGUF。Bonsai PQ2_0 使用 PrismML llama-server，Qwen GGUF 使用 llama-cpp-python。"
       },
       "mmproj_file": {
         "name": "视觉投影文件（mmproj）",
@@ -225,11 +225,11 @@
       },
       "thinking_mode": {
         "name": "思考强度",
-        "tooltip": "auto：沿用旧版本默认关闭思考；off：明确关闭。low / medium / xhigh 为当前本地映射档位；high 按 medium、max 按 xhigh 执行。运行统计同时显示选择值与实际值。"
+        "tooltip": "Qwen 的 auto 关闭思考；Bonsai 的 auto 对纯文字关闭思考，对图片/视频帧使用 low。off 明确关闭；high 按 medium、max 按 xhigh 执行。"
       },
       "context_length": {
         "name": "上下文长度",
-        "tooltip": "本地 llama.cpp 用于提示词、媒体 token 和回答的上下文窗口；API 后端忽略此项，修改后会重新加载已加载的本地模型。"
+        "tooltip": "提示词、媒体 token 和回答共用的本地上下文。Bonsai 至少使用 16K；改变值会重新加载模型。"
       },
       "max_tokens": {
         "name": "最大输出 token 数",

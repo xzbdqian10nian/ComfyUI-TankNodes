@@ -280,14 +280,15 @@ def _run_chat(
     tools_json: str | None,
     progress_callback=None,
 ):
-    is_api = getattr(backend, "backend_kind", "") == "openai_compatible"
+    backend_kind = getattr(backend, "backend_kind", "")
+    is_api = backend_kind in {"openai_compatible", "local_bonsai_server"}
     content, media_counts = _build_content(
         prompt,
         image,
         video_frames,
         video,
         int(max_video_frames),
-        video_transport,
+        "frames" if backend_kind == "local_bonsai_server" else video_transport,
         is_api,
     )
     # Some image/video chat templates (including Qwen3.8's MTMD template)
