@@ -1,5 +1,12 @@
 # TankNodes 更新记录 / Changelog
 
+## Unreleased — 文本分割 / Text split
+
+- 新增“文本分割 · Tank”（`TankTextSplit`），可替代 mixlab 的 Text Split By Delimiter：同样支持开始索引、每隔跳过和最大数量，并额外输出实际项数。
+- 分隔符只转换 `\n`、`\t`、`\r`、`\\`，中文逗号等非 ASCII 分隔符不再被错误解码。高级参数可去除首尾空白或启用正则；没有可输出的项时明确报错。
+
+Added Text Split · Tank as a drop-in alternative to mixlab's Text Split By Delimiter, with a count output, safe handling of non-ASCII delimiters, optional trimming and regex mode, and an explicit error when nothing is output.
+
 ## Unreleased — Ternary Bonsai 本地反推
 
 - 原有 `Qwen38VLLoader` 节点增加官方 Bonsai PQ2_0 与 Abliterated v2 选项，节点 ID、输入顺序和输出位置保持不变。

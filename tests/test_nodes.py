@@ -34,7 +34,7 @@ def chat_kwargs(cls, backend):
 
 def test_legacy_node_contract(plugin):
     old = json.loads((ROOT / "tests/fixtures/v060_contract.json").read_text())
-    assert set(plugin.NODE_CLASS_MAPPINGS) == set(old)
+    assert set(old) <= set(plugin.NODE_CLASS_MAPPINGS)
     for key, contract in old.items():
         cls = plugin.NODE_CLASS_MAPPINGS[key]
         schema = cls.INPUT_TYPES()

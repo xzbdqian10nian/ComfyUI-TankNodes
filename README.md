@@ -15,6 +15,7 @@ Search for **Tank** in the node menu.
 | API Chat (Environment Key) · Tank | Read an API key from a server environment variable. |
 | API Chat (Direct Key) · Tank | Enter an API key in the node. Clear it before sharing the workflow. |
 | Unload Model · Tank | Release GPU memory. Connect the chat response to **after** to wait for generation to finish. |
+| Text Split · Tank | Split text into a list by a delimiter (`\n` for new lines, Chinese punctuation works as-is). Connected nodes run once per item; advanced options trim items or use a regular expression such as `[,，]`. |
 
 Each run is a separate request, with no automatic conversation history. API nodes work on their own and do not need the local model loader.
 

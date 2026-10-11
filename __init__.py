@@ -2,6 +2,7 @@
 
 from .api_nodes import VisionAPIDirect, VisionAPIEnv
 from .local_nodes import Qwen38VLLoader, VisionChat, VisionUnload
+from .text_nodes import TankTextSplit
 
 # These are persisted in existing workflows. Branding must not change them.
 NODE_CLASS_MAPPINGS = {
@@ -10,6 +11,7 @@ NODE_CLASS_MAPPINGS = {
     "VisionAPIDirect": VisionAPIDirect,
     "VisionChat": VisionChat,
     "VisionUnload": VisionUnload,
+    "TankTextSplit": TankTextSplit,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -18,6 +20,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "VisionAPIDirect": "API Chat (Direct Key) · Tank",
     "VisionChat": "Local Multimodal Chat · Tank",
     "VisionUnload": "Unload Model · Tank",
+    "TankTextSplit": "Text Split · Tank",
 }
 
 WEB_DIRECTORY = "./web"

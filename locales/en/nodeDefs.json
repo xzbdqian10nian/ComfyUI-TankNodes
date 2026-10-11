@@ -326,5 +326,49 @@
         "tooltip": "Human-readable unload result."
       }
     }
+  },
+  "TankTextSplit": {
+    "display_name": "Text Split · Tank",
+    "description": "Split text into a list. Blank items are dropped; connected nodes run once per item.",
+    "inputs": {
+      "text": {
+        "name": "text",
+        "tooltip": "Text to split."
+      },
+      "delimiter": {
+        "name": "delimiter",
+        "tooltip": "Separator. Use \\n for a new line and \\t for a tab. Leave empty to output the whole text as one item."
+      },
+      "start_index": {
+        "name": "start index",
+        "tooltip": "Index of the first item to output, counting from 0."
+      },
+      "skip_every": {
+        "name": "skip every",
+        "tooltip": "Items skipped after each output item. 1 outputs every other item."
+      },
+      "max_count": {
+        "name": "max count",
+        "tooltip": "Maximum number of items to output."
+      },
+      "trim": {
+        "name": "trim items",
+        "tooltip": "Remove spaces and line breaks around each item."
+      },
+      "regex": {
+        "name": "regex",
+        "tooltip": "Treat the delimiter as a regular expression, for example [,，] for both commas."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "items",
+        "tooltip": "Each item runs connected nodes once."
+      },
+      "1": {
+        "name": "count",
+        "tooltip": "Number of items output."
+      }
+    }
   }
 }
