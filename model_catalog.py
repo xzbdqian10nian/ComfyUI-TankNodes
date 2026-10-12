@@ -7,6 +7,8 @@ import os
 from pathlib import Path
 from typing import Any
 
+from .downloads import auto_download_enabled, fetch, hf_url
+
 try:
     import folder_paths
 except Exception:  # pragma: no cover - only used by standalone tests
@@ -39,6 +41,21 @@ def _load_catalog() -> dict[str, Any]:
 CATALOG = _load_catalog()
 
 
+def _known_files() -> dict[str, dict[str, str]]:
+    """Catalogue filenames that can be downloaded on first use, by kind."""
+    known: dict[str, dict[str, str]] = {"model": {}, "mmproj": {}}
+    for source in CATALOG.get("sources", []):
+        repo = source.get("repo")
+        if source.get("model") and repo:
+            known["model"].setdefault(source["model"], repo)
+        if source.get("mmproj") and repo:
+            known["mmproj"].setdefault(source["mmproj"], source.get("mmproj_repo", repo))
+    return known
+
+
+KNOWN_FILES = _known_files()
+
+
 def _model_root() -> Path:
     configured = os.environ.get("QWEN38_MODEL_DIR")
     if configured:
@@ -59,7 +76,7 @@ def _is_complete_file(path: Path) -> bool:
 
 
 def _choices(kind: str) -> list[str]:
-    """Return available GGUF filenames, with the catalogue default first."""
+    """Return local GGUF files plus downloadable catalogue files, default first."""
     root = _model_root()
     found: list[str] = []
     if root.exists():
@@ -73,7 +90,9 @@ def _choices(kind: str) -> list[str]:
 
     preferred = DEFAULT_MMPROJ if kind == "mmproj" else DEFAULT_MODEL
     configured = CATALOG.get("default_mmproj" if kind == "mmproj" else "default_model", preferred)
-    ordered = sorted(set(found), key=lambda name: (name != configured, name.lower()))
+    local = set(found)
+    names = local | set(KNOWN_FILES[kind])
+    ordered = sorted(names, key=lambda name: (name != configured, name not in local, name.lower()))
     return ordered or [MISSING_FILES[kind]]
 
 
@@ -86,6 +105,11 @@ def _resolve_file(filename: str, kind: str) -> Path:
         path = _model_root() / path
     if Path(f"{path}.aria2").exists():
         raise RuntimeError(f"{kind} is still downloading: {path}")
+    repo = KNOWN_FILES.get(kind, {}).get(filename)
+    if not path.is_file() and repo:
+        if not auto_download_enabled():
+            raise FileNotFoundError(f"{kind} not found: {path}. Download {filename} from https://huggingface.co/{repo} or unset TANKNODES_AUTO_DOWNLOAD.")
+        fetch(hf_url(repo, filename), path, label=filename)
     if not path.is_file():
         raise FileNotFoundError(f"{kind} not found: {path}")
     if path.stat().st_size <= 1024 * 1024:

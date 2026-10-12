@@ -1,5 +1,14 @@
 # TankNodes 更新记录 / Changelog
 
+## Unreleased — 安装即用 / Works after install
+
+- 模型首次使用时自动下载：加载器列出 models.json 收录的主模型和视觉投影，本地缺少时从 Hugging Face 断点续传下载到 `models/LLM/Qwen3.8`，支持 `HF_ENDPOINT` 镜像；`TANKNODES_AUTO_DOWNLOAD=0` 可关闭。
+- PrismML llama-server 自动安装：按系统与 PyTorch CUDA 版本下载固定的官方 `prism-b10743-adfffbe` 构建，校验 SHA-256 后解压到插件 `runtime/`。查找顺序为 `BONSAI_LLAMA_SERVER` → `runtime/` → 自动下载；删除写死的实例路径。
+- Qwen 未安装 llama-cpp-python 时改用同一 llama-server（`auto` 思考保持关闭）；已安装时行为不变，`TANKNODES_LOCAL_RUNTIME` 可强制选择。
+- Bonsai 视觉投影不匹配时在下载前报错。README 去除实例专用路径。
+
+Listed models now download on first use (resumable, mirror-aware) and the pinned PrismML llama-server installs itself into the plugin's `runtime/` folder after SHA-256 verification. Qwen falls back to llama-server when llama-cpp-python is missing. Instance-specific paths were removed.
+
 ## Unreleased — 文本分割 / Text split
 
 - 新增“文本分割 · Tank”（`TankTextSplit`），可替代 mixlab 的 Text Split By Delimiter：同样支持开始索引、每隔跳过和最大数量，并额外输出实际项数。

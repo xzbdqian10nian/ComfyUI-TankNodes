@@ -21,35 +21,44 @@ Tank 的 ComfyUI 节点合集。可以用本地 Qwen3.8 或 Ternary Bonsai 处�
 
 ## 安装
 
-在 `ComfyUI/custom_nodes` 下执行：
+在 ComfyUI Manager 里搜索 **TankNodes** 安装，或在 `ComfyUI/custom_nodes` 下执行：
 
 ```bash
 git clone https://github.com/xzbdqian10nian/ComfyUI-TankNodes.git
 ```
 
-重启 ComfyUI，然后刷新浏览器。Python 需要 3.10 或更新版本；额外依赖见 [requirements.txt](requirements.txt)，使用 ComfyUI 自己的 Python 环境安装。
+重启 ComfyUI，然后刷新浏览器。Python 需要 3.10 或更新版本。安装完就能用，不需要另外装推理程序或手动下载模型：
 
-本地 Qwen 推理还需要支持 Qwen3.8、与现有 CUDA 匹配的 `llama-cpp-python`。Bonsai PQ2_0 则需要 PrismML 的 `llama-server`，不能用普通 `llama-cpp-python` 直接加载。用外部 API 不需要这些本地推理程序。插件不会替换 Torch、CUDA 或显卡驱动。
+- **模型**：加载器下拉框列出了插件支持的模型。本地没有的文件，第一次运行时会自动从 Hugging Face 下载到 `ComfyUI/models/LLM/Qwen3.8/`，断网后重跑会接着下。国内网络可在启动 ComfyUI 前设置 `HF_ENDPOINT=https://hf-mirror.com`。
+- **推理程序**：本地模型用 [PrismML llama.cpp](https://github.com/PrismML-Eng/llama.cpp) 的 `llama-server` 运行。第一次用到时，插件按系统和 PyTorch 的 CUDA 版本，从官方发布页下载固定版本（Linux / Windows CUDA、macOS Apple 芯片），校验 SHA-256 后解压到插件自己的 `runtime/` 目录，只下载一次。
+- **已装 llama-cpp-python 的环境**：Qwen 模型会继续用它；没有装时自动改用上面的 llama-server。Bonsai 始终用 llama-server。
+
+插件不会替换 Torch、CUDA 或显卡驱动。只用 API 节点时什么都不会下载。
+
+可选环境变量（启动 ComfyUI 前设置）：
+
+| 变量 | 作用 |
+| --- | --- |
+| `TANKNODES_AUTO_DOWNLOAD=0` | 关闭自动下载；缺文件时直接报错并提示下载地址，适合离线或自己管理文件的环境。 |
+| `QWEN38_MODEL_DIR` | 换一个模型目录。 |
+| `BONSAI_LLAMA_SERVER` | 使用自己准备的 llama-server 可执行文件。 |
+| `TANKNODES_LOCAL_RUNTIME` | `llama-server` 或 `llama-cpp-python`，强制 Qwen 使用某一种运行方式。 |
 
 ## 先跑一个本地示例
 
-1. 把 GGUF 主模型和对应的视觉投影放进 `ComfyUI/models/LLM/Qwen3.8/`。
-2. 打开 [01_text_chat.json](example_workflows/01_text_chat.json)，在加载器里选好两个文件。
-3. 修改“用户输入”，点击运行。权重会在对话开始时加载。
+1. 打开 [01_text_chat.json](example_workflows/01_text_chat.json)，加载器保持默认的 `Qwen3.8-27B-UD-Q4_K_M.gguf` 和 `mmproj-BF16.gguf`。
+2. 修改“用户输入”，点击运行。第一次运行会先下载约 17 GB 的模型和推理程序，控制台会显示进度；之后直接加载。
 
-本次测试用的是 [Unsloth](https://huggingface.co/unsloth/Qwen3.8-27B-GGUF) 的 `Qwen3.8-27B-UD-Q4_K_M.gguf` 和 `mmproj-BF16.gguf`。其他已收录的文件见 [models.json](models.json)。主模型和投影要使用配套版本，不要只看文件名相似就混用。
-
-模型目录支持子文件夹，也可以用 `QWEN38_MODEL_DIR` 指定其他位置。插件不下载模型；下拉框显示“未找到”时，先检查文件是否放对、下载是否完成。
+默认模型来自 [Unsloth](https://huggingface.co/unsloth/Qwen3.8-27B-GGUF)。其他已收录的文件见 [models.json](models.json)。主模型和投影要使用配套版本，不要只看文件名相似就混用。自己放进模型目录的其他 GGUF（支持子文件夹）也会出现在下拉框里。
 
 ## 用 Bonsai 做图片反推和提示词优化
 
-把以下文件放在同一个 `ComfyUI/models/LLM/Qwen3.8/` 目录中，并确保 ComfyUI 能读到。选其中一个主模型，视觉投影必须选配套文件：
+在加载器里选择其中一个主模型，视觉投影选 `Ternary-Bonsai-2-27B-mmproj-Q8_0.gguf`（两者共用，选错会在下载前报错）：
 
 - 官方版：`Ternary-Bonsai-2-27B-PQ2_0.gguf`（[Prism ML 发布页](https://huggingface.co/prism-ml/Ternary-Bonsai-2-27B-gguf)）。
 - 低拒绝版：`Ternary-Bonsai-2-27B-Abliterated-v2-PQ2_0-MTP.gguf`（[BoldingBuilds 发布页](https://huggingface.co/BoldingBuilds/Ternary-Bonsai-2-27B-Abliterated-v2-PQ2_0-MTP-GGUF)）。文件名含 MTP，普通反推模式仍不启用 MTP。
-- 两者配套视觉投影：`Ternary-Bonsai-2-27B-mmproj-Q8_0.gguf`。
 
-还需安装支持 PQ2_0 的 [PrismML llama.cpp](https://github.com/PrismML-Eng/llama.cpp)。默认从 `/root/bonsai-test/runtime/llama-server` 查找；其他位置可在启动 ComfyUI 前设置 `BONSAI_LLAMA_SERVER` 为可执行文件的绝对路径。模型文件仍应优先存于 `/poddata/ComfyUI/models/LLM/Qwen3.8/`，再通过 `/root/ComfyUI/models` 对应入口供插件读取；插件不自动下载或删除文件。
+第一次运行会自动下载约 8 GB 的模型文件和推理程序。
 
 连接“Qwen / Bonsai 模型加载”到“本地多模态对话”。Bonsai 首次调用才在本机回环地址启动兼容服务；ComfyUI 不会被关闭。插件先按“释放 ComfyUI 显存”卸载缓存的扩散模型。默认至少使用 16K 上下文、Flash Attention、Q8 KV 缓存、单并发，**不启用 MTP**。这些设置是为常见短图片反推与客户提示词优化选择的；超长素材可以在对话节点提高上下文，但会多占显存、延长加载。`auto` 在纯文字提示词优化时关闭思考提速；带图片或视频帧时使用 `low`，减少漏写明显视觉特征。复杂任务可明确选 `medium`，同时留足输出 token，避免思考占满预算。模型保留在显存时后续调用更快；后面要跑图像生成时打开“生成后卸载”或连接“模型释放”。
 

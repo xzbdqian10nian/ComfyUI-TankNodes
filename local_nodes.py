@@ -1,6 +1,9 @@
 """Local model nodes. Public node IDs and widget order remain compatible."""
 from __future__ import annotations
 
+import importlib.util
+import os
+from pathlib import Path
 from typing import Any
 import torch
 
@@ -10,6 +13,19 @@ from .chat import _run_chat
 from .model_catalog import BONSAI_MMPROJ, bonsai_variant, _choices, _resolve_file, selection_info
 from .progress import ConsoleProgressBar, StatusTicker, make_progress, send_status, update_progress
 from .reasoning import REASONING_CHOICES, validate_reasoning_choice
+
+def _qwen_uses_llama_cpp() -> bool:
+    """Qwen GGUF uses llama-cpp-python when installed, otherwise llama-server.
+
+    TANKNODES_LOCAL_RUNTIME=llama-server or llama-cpp-python forces a choice.
+    """
+    choice = os.environ.get("TANKNODES_LOCAL_RUNTIME", "auto").strip().lower()
+    if choice in {"llama-server", "server"}:
+        return False
+    if choice in {"llama-cpp-python", "llama_cpp"}:
+        return True
+    return importlib.util.find_spec("llama_cpp") is not None
+
 
 class Qwen38VLLoader:
     """Load a supported local GGUF backend."""
@@ -32,14 +48,14 @@ class Qwen38VLLoader:
                     models,
                     {
                         "default": models[0],
-                        "tooltip": "Main GGUF model. Bonsai PQ2_0 uses the PrismML llama-server runtime; Qwen GGUF uses llama-cpp-python.",
+                        "tooltip": "Main GGUF model. Listed files that are not in models/LLM/Qwen3.8 yet are downloaded on first run. Bonsai PQ2_0 uses PrismML llama-server (installed automatically); Qwen GGUF uses llama-cpp-python when available, otherwise the same llama-server.",
                     },
                 ),
                 "mmproj_file": (
                     projectors,
                     {
                         "default": projectors[0],
-                        "tooltip": "Vision projector GGUF required to understand images and video frames.",
+                        "tooltip": "Vision projector GGUF required to understand images and video frames. Listed files are downloaded on first run if missing.",
                     },
                 ),
                 "batch_size": (
@@ -100,7 +116,11 @@ class Qwen38VLLoader:
         free_comfy_vram: bool,
         unique_id: str | None = None,
     ):
-        send_status("Preparing local model backend…", unique_id)
+        send_status("Preparing local model backend… (missing listed models download on first run)", unique_id)
+        variant = bonsai_variant(model_file)
+        # Check the pairing before any multi-gigabyte download starts.
+        if variant and Path(str(mmproj_file)).name != BONSAI_MMPROJ:
+            raise BackendError(f"Ternary Bonsai requires the matching projector: {BONSAI_MMPROJ}")
         model_path = _resolve_file(model_file, "model")
         mmproj_path = _resolve_file(mmproj_file, "mmproj")
         settings = LocalRuntimeSettings(
@@ -111,10 +131,12 @@ class Qwen38VLLoader:
             n_gpu_layers=int(gpu_layers),
             free_comfy_vram=bool(free_comfy_vram),
         )
-        variant = bonsai_variant(model_file)
-        if variant and mmproj_path.name != BONSAI_MMPROJ:
-            raise BackendError(f"Ternary Bonsai requires the matching projector: {BONSAI_MMPROJ}")
-        backend = LocalBonsaiBackend(settings, variant) if variant else LocalQwen38Backend(settings)
+        if variant:
+            backend = LocalBonsaiBackend(settings, variant)
+        elif _qwen_uses_llama_cpp():
+            backend = LocalQwen38Backend(settings)
+        else:
+            backend = LocalBonsaiBackend(settings, "qwen")
         send_status(f"Model configuration ready: {model_path.name}", unique_id)
         return backend, f"{backend.info()}\n{selection_info(model_file, mmproj_file)}"
 

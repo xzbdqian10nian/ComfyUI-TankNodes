@@ -81,22 +81,31 @@ def test_legacy_reasoning_validation(plugin, legacy):
 def test_model_discovery_and_pairing(module, tmp_path, monkeypatch):
     models = module("model_catalog")
     monkeypatch.setenv("QWEN38_MODEL_DIR", str(tmp_path))
-    assert models._choices("model") == [models.MISSING_FILES["model"]]
-    assert models._choices("mmproj") == [models.MISSING_FILES["mmproj"]]
+    monkeypatch.setenv("TANKNODES_AUTO_DOWNLOAD", "0")
+    # With an empty folder the catalogue files are still offered for download.
+    assert models._choices("model")[0] == models.DEFAULT_MODEL
+    assert set(models._choices("model")) == set(models.KNOWN_FILES["model"])
+    assert models._choices("mmproj")[0] == models.DEFAULT_MMPROJ
+    with pytest.raises(FileNotFoundError, match="huggingface.co/unsloth"):
+        models._resolve_file(models.DEFAULT_MODEL, "model")
     with pytest.raises(FileNotFoundError, match="No model"):
-        models._resolve_file(models._choices("model")[0], "model")
+        models._resolve_file(models.MISSING_FILES["model"], "model")
     for filename in (models.DEFAULT_MODEL, models.DEFAULT_MMPROJ, "other/alt.GGUF", "other/MMPROJ.GGUF", "partial.gguf"):
         file = tmp_path / filename
         file.parent.mkdir(exist_ok=True)
         with file.open("wb") as f:
             f.truncate(2 * 1024 * 1024)
     (tmp_path / "partial.gguf.aria2").touch()
-    assert models._choices("model") == [models.DEFAULT_MODEL, "other/alt.GGUF"]
-    assert models._choices("mmproj") == [models.DEFAULT_MMPROJ, "other/MMPROJ.GGUF"]
+    choices = models._choices("model")
+    assert choices[:2] == [models.DEFAULT_MODEL, "other/alt.GGUF"]
+    assert "partial.gguf" not in choices
+    assert models._choices("mmproj")[:2] == [models.DEFAULT_MMPROJ, "other/MMPROJ.GGUF"]
     assert models._resolve_file("other/alt.GGUF", "model") == tmp_path / "other/alt.GGUF"
     assert "projector_filename_match=True" in models.selection_info(models.DEFAULT_MODEL, models.DEFAULT_MMPROJ)
     with pytest.raises(RuntimeError, match="downloading"):
         models._resolve_file("partial.gguf", "model")
+    # The abliterated Bonsai release reuses the official projector repository.
+    assert models.KNOWN_FILES["mmproj"]["Ternary-Bonsai-2-27B-mmproj-Q8_0.gguf"] == "prism-ml/Ternary-Bonsai-2-27B-gguf"
 
 
 def test_local_chat_outputs_media_and_unload(plugin):

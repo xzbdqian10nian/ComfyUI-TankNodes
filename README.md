@@ -21,29 +21,39 @@ Each run is a separate request, with no automatic conversation history. API node
 
 ## Install
 
-From `ComfyUI/custom_nodes`:
+Search for **TankNodes** in ComfyUI Manager, or run from `ComfyUI/custom_nodes`:
 
 ```bash
 git clone https://github.com/xzbdqian10nian/ComfyUI-TankNodes.git
 ```
 
-Restart ComfyUI and refresh the browser. Use Python 3.10 or newer. Install the extra dependencies in [requirements.txt](requirements.txt) with ComfyUI's own Python environment.
+Restart ComfyUI and refresh the browser. Use Python 3.10 or newer. Nothing else has to be installed by hand:
 
-Local Qwen inference needs a `llama-cpp-python` build that supports Qwen3.8 and matches your CUDA runtime. Bonsai PQ2_0 instead needs PrismML's `llama-server`. API nodes do not need either local runtime. The plugin does not replace Torch, CUDA or GPU drivers.
+- **Models**: the loader lists the supported models. Any listed file that is not in `ComfyUI/models/LLM/Qwen3.8/` yet is downloaded from Hugging Face the first time it runs, and an interrupted download resumes. Set `HF_ENDPOINT` to use a mirror.
+- **Runtime**: local models run on [PrismML llama.cpp](https://github.com/PrismML-Eng/llama.cpp)'s `llama-server`. On first use the plugin downloads a pinned official build for your OS and PyTorch CUDA version (Linux and Windows CUDA, Apple Silicon macOS), verifies its SHA-256 and extracts it into the plugin's own `runtime/` folder, once.
+- **Existing llama-cpp-python**: Qwen keeps using it when installed; otherwise it runs on the same llama-server. Bonsai always uses llama-server.
+
+The plugin never replaces Torch, CUDA or GPU drivers. API nodes alone download nothing.
+
+Optional environment variables, set before starting ComfyUI:
+
+| Variable | Effect |
+| --- | --- |
+| `TANKNODES_AUTO_DOWNLOAD=0` | Disable downloads; missing files raise an error with the download link. For offline or self-managed setups. |
+| `QWEN38_MODEL_DIR` | Use another model folder. |
+| `BONSAI_LLAMA_SERVER` | Use your own llama-server executable. |
+| `TANKNODES_LOCAL_RUNTIME` | `llama-server` or `llama-cpp-python` to force how Qwen runs. |
 
 ## Quick start
 
-1. Put the main GGUF and matching vision projector in `ComfyUI/models/LLM/Qwen3.8/`.
-2. Open [01_text_chat.json](example_workflows/01_text_chat.json) and select both files in the loader.
-3. Edit the user prompt and run. Model weights load when chat starts.
+1. Open [01_text_chat.json](example_workflows/01_text_chat.json) and keep the loader defaults, `Qwen3.8-27B-UD-Q4_K_M.gguf` and `mmproj-BF16.gguf`.
+2. Edit the user prompt and run. The first run downloads about 17 GB of model files plus the runtime and shows progress in the console; later runs load directly.
 
-The tested pair is `Qwen3.8-27B-UD-Q4_K_M.gguf` and `mmproj-BF16.gguf` from [Unsloth](https://huggingface.co/unsloth/Qwen3.8-27B-GGUF). Other catalogued files are listed in [models.json](models.json). Use a main model and projector from the same release.
-
-Subfolders are supported. Set `QWEN38_MODEL_DIR` to use another location. The plugin does not download weights; if the menu says no model was found, check the path and whether the download finished.
+The default pair comes from [Unsloth](https://huggingface.co/unsloth/Qwen3.8-27B-GGUF). Other catalogued files are listed in [models.json](models.json). Use a main model and projector from the same release. Other GGUF files you place in the model folder, including subfolders, also appear in the menu.
 
 ## Ternary Bonsai for reverse prompting
 
-The loader also recognizes the official `Ternary-Bonsai-2-27B-PQ2_0.gguf` and `Ternary-Bonsai-2-27B-Abliterated-v2-PQ2_0-MTP.gguf`. Pair either with `Ternary-Bonsai-2-27B-mmproj-Q8_0.gguf` in the same model directory. The [official GGUF](https://huggingface.co/prism-ml/Ternary-Bonsai-2-27B-gguf) and [abliterated v2](https://huggingface.co/BoldingBuilds/Ternary-Bonsai-2-27B-Abliterated-v2-PQ2_0-MTP-GGUF) are separate choices. Install a PQ2_0-capable [PrismML llama.cpp](https://github.com/PrismML-Eng/llama.cpp) binary at `/root/bonsai-test/runtime/llama-server`, or set `BONSAI_LLAMA_SERVER` before starting ComfyUI. The plugin does not download models or the runtime.
+Select the official `Ternary-Bonsai-2-27B-PQ2_0.gguf` ([Prism ML](https://huggingface.co/prism-ml/Ternary-Bonsai-2-27B-gguf)) or `Ternary-Bonsai-2-27B-Abliterated-v2-PQ2_0-MTP.gguf` ([abliterated v2](https://huggingface.co/BoldingBuilds/Ternary-Bonsai-2-27B-Abliterated-v2-PQ2_0-MTP-GGUF)) with the shared projector `Ternary-Bonsai-2-27B-mmproj-Q8_0.gguf`; a mismatched projector is rejected before anything downloads. The first run downloads about 8 GB of weights plus the runtime.
 
 For a local Bonsai chat, the plugin starts a loopback server on demand without stopping ComfyUI. It uses at least 16K context, Flash Attention, Q8 KV cache, one concurrent slot and no MTP. In measured short Chinese creative tasks, MTP was slower; a filename containing MTP does not enable it. Bonsai `auto` disables thinking for text-only prompt polishing and uses `low` effort when images or video frames are attached. Select `medium` explicitly for harder requests and allow enough output tokens for the reasoning. A one-token empty answer gets one retry with another seed; reasoning that exhausts the output budget raises an explicit error. Keep the model loaded for repeated calls, or use **unload after** to free GPU memory for image generation. On one idle RTX 5090, either 16K variant used about 8.9 GiB and worked with ComfyUI still running. Single images, short text and a synthetic two-frame input were verified; full VIDEO objects and longer workflows need checks with actual material.
 

@@ -1,7 +1,8 @@
-"""Run PrismML's PQ2_0 Bonsai server beside an idle ComfyUI process.
+"""Run PrismML llama-server beside an idle ComfyUI process.
 
-The existing llama-cpp-python backend cannot load PrismML PQ2_0 weights.
-This adapter starts the compatible llama-server on loopback, then reuses the
+llama-cpp-python cannot load PrismML PQ2_0 weights, and is often not installed
+at all. This adapter starts the bundled-on-demand llama-server on loopback for
+Bonsai, and for Qwen GGUF when llama-cpp-python is unavailable, then reuses the
 plugin's cancellable OpenAI-compatible transport and multimodal chat path.
 """
 
@@ -29,15 +30,25 @@ from .backends import (
     release_local_backend,
 )
 from .reasoning import resolve_qwen38_effort
+from .runtime_manager import RuntimeUnavailable, ensure_server
 
 
-DEFAULT_SERVER = Path("/root/bonsai-test/runtime/llama-server")
 MIN_CONTEXT = 16384
+QWEN_MIN_CONTEXT = 2048
+VARIANTS = {
+    # variant: (alias, minimum context, display name, auto effort with images)
+    "stock": ("bonsai2-27b-pq2", MIN_CONTEXT, "Bonsai", "low"),
+    "abliterated_v2": ("bonsai2-27b-abliterated-v2", MIN_CONTEXT, "Bonsai", "low"),
+    "qwen": ("qwen38-27b", QWEN_MIN_CONTEXT, "Qwen", None),
+}
 STARTUP_TIMEOUT = 180.0
 
 
 class _BonsaiHTTPBackend(OpenAICompatibleBackend):
     """Pass Qwen-family thinking controls to the Prism chat template."""
+
+    # Bonsai auto thinks at low effort for images; local Qwen auto stays off.
+    auto_visual_effort: str | None = "low"
 
     def complete(self, **kwargs):
         # Short text polishing benefits most from no thinking; images and
@@ -59,8 +70,8 @@ class _BonsaiHTTPBackend(OpenAICompatibleBackend):
         choice, enabled, effort = resolve_qwen38_effort(value)
         self.last_reasoning_choice = choice
         if enabled is None:
-            enabled = getattr(self, "_auto_visual", False)
-            effort = "low" if enabled else None
+            effort = self.auto_visual_effort if getattr(self, "_auto_visual", False) else None
+            enabled = effort is not None
         self.last_reasoning_effort = effort if enabled else "off"
         template = extra_body.setdefault("chat_template_kwargs", {})
         template["enable_thinking"] = enabled
@@ -108,11 +119,14 @@ class LocalBonsaiBackend:
     backend_kind = "local_bonsai_server"
 
     def __init__(self, settings: LocalRuntimeSettings, variant: str):
-        if variant not in {"stock", "abliterated_v2"}:
+        if variant not in VARIANTS:
             raise ValueError(f"Unknown Bonsai variant: {variant}")
         self.settings = settings
         self.variant = variant
-        self.n_ctx = MIN_CONTEXT
+        self.alias, self.min_context, self.label, self.auto_visual_effort = VARIANTS[variant]
+        if variant == "qwen":
+            self.backend_kind = "local_llama_server"
+        self.n_ctx = max(self.min_context, 8192)
         self.thinking_mode = "auto"
         self.load_seconds = 0.0
         self._lock = threading.RLock()
@@ -125,17 +139,14 @@ class LocalBonsaiBackend:
 
     def configure_chat(self, context_length: int, thinking_mode: str) -> None:
         with self._lock:
-            requested = max(MIN_CONTEXT, int(context_length))
+            requested = max(self.min_context, int(context_length))
             if self._process is not None and self.n_ctx != requested:
                 self.unload()
             self.n_ctx = requested
             self.thinking_mode = resolve_qwen38_effort(thinking_mode)[0]
 
     def _server_command(self, binary: Path, port: int) -> list[str]:
-        alias = (
-            "bonsai2-27b-pq2" if self.variant == "stock"
-            else "bonsai2-27b-abliterated-v2"
-        )
+        alias = self.alias
         gpu_layers = 999 if self.settings.n_gpu_layers < 0 else self.settings.n_gpu_layers
         args = [
             str(binary), "--model", str(self.settings.model_path),
@@ -169,15 +180,17 @@ class LocalBonsaiBackend:
                 return
             if self._process is not None:
                 self.unload()
-            binary = Path(os.environ.get("BONSAI_LLAMA_SERVER", str(DEFAULT_SERVER))).expanduser()
-            if not binary.is_file() or not os.access(binary, os.X_OK):
-                raise BackendError(
-                    f"PrismML llama-server is missing or not executable: {binary}. "
-                    "Set BONSAI_LLAMA_SERVER before starting ComfyUI."
-                )
+            if callable(progress_callback):
+                progress_callback("runtime", 0.02)
+            try:
+                binary = ensure_server()
+            except (RuntimeUnavailable, OSError) as error:
+                raise BackendError(f"PrismML llama-server is unavailable: {error}") from None
+            if not os.access(binary, os.X_OK):
+                raise BackendError(f"PrismML llama-server is not executable: {binary}")
             for path in (self.settings.model_path, self.settings.mmproj_path):
                 if not path.is_file():
-                    raise BackendError(f"Bonsai model file is missing: {path}")
+                    raise BackendError(f"{self.label} model file is missing: {path}")
             claim_local_backend(self)
             try:
                 if self.settings.free_comfy_vram:
@@ -204,12 +217,14 @@ class LocalBonsaiBackend:
                         with urlopen(health_url, timeout=2) as response:
                             if response.status == 200:
                                 self.load_seconds = time.monotonic() - started
-                                self._client = _BonsaiHTTPBackend(
+                                client = _BonsaiHTTPBackend(
                                     base_url=f"http://127.0.0.1:{self._port}/v1",
                                     api_key="", api_key_env="", model=command[command.index("--alias") + 1],
                                     timeout=300.0,
                                     extra_body_json='{"stream_options":{"include_usage":true}}',
                                 )
+                                client.auto_visual_effort = self.auto_visual_effort
+                                self._client = client
                                 if callable(progress_callback):
                                     progress_callback("ready", 1.0)
                                 return
@@ -223,7 +238,7 @@ class LocalBonsaiBackend:
                     self._log.flush()
                     self._log.seek(0)
                     detail = self._log.read()[-1200:].strip()
-                raise BackendError(f"PrismML Bonsai server did not become ready. {detail}")
+                raise BackendError(f"PrismML llama-server ({self.label}) did not become ready. {detail}")
             except BaseException:
                 self.unload()
                 raise
@@ -240,13 +255,13 @@ class LocalBonsaiBackend:
             if answered:
                 return result
             if tokens is not None and tokens > 1:
-                raise BackendError("Bonsai used the output budget without a final answer. Increase max_tokens or lower thinking effort.")
+                raise BackendError(f"{self.label} used the output budget without a final answer. Increase max_tokens or lower thinking effort.")
             retry = dict(kwargs, seed=_retry_seed(kwargs.get("seed")))
             self.empty_response_retries = 1
             result = self._client.complete(**retry)
             answered, _ = _response_parts(result)
             if not answered:
-                raise BackendError("Bonsai returned no answer after one retry. Try another seed or model.")
+                raise BackendError(f"{self.label} returned no answer after one retry. Try another seed or model.")
             return result
 
     def _stream_completion(self, kwargs):
@@ -258,7 +273,7 @@ class LocalBonsaiBackend:
                 request = kwargs if attempt == 0 else dict(kwargs, seed=_retry_seed(kwargs.get("seed")))
                 if attempt:
                     self.empty_response_retries = 1
-                    print("[TankNodes] Bonsai returned an empty response; retrying once with another seed")
+                    print(f"[TankNodes] {self.label} returned an empty response; retrying once with another seed")
                 stream = self._client.complete(**request)
                 answered = False
                 completion_tokens = None
@@ -276,8 +291,8 @@ class LocalBonsaiBackend:
                 if answered:
                     return
                 if completion_tokens is not None and completion_tokens > 1:
-                    raise BackendError("Bonsai used the output budget without a final answer. Increase max_tokens or lower thinking effort.")
-            raise BackendError("Bonsai returned no answer after one retry. Try another seed or model.")
+                    raise BackendError(f"{self.label} used the output budget without a final answer. Increase max_tokens or lower thinking effort.")
+            raise BackendError(f"{self.label} returned no answer after one retry. Try another seed or model.")
 
     def reasoning_info(self) -> str:
         if self._client is not None:
@@ -286,9 +301,9 @@ class LocalBonsaiBackend:
 
     def info(self) -> str:
         return (
-            f"backend=local_bonsai_server\nvariant={self.variant}\n"
+            f"backend={self.backend_kind}\nvariant={self.variant}\n"
             f"model={self.settings.model_path.name}\nmmproj={self.settings.mmproj_path.name}\n"
-            f"runtime=PrismML llama-server\ncontext_minimum={MIN_CONTEXT}\n"
+            f"runtime=PrismML llama-server\ncontext_minimum={self.min_context}\n"
             "flash_attention=on\nkv_cache=q8_0\nmtp=off\n"
             f"state={'loaded' if self._process is not None else 'prepared'}\n"
             f"load_seconds={self.load_seconds:.1f}"
