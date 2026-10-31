@@ -49,12 +49,15 @@ class _BonsaiHTTPBackend(OpenAICompatibleBackend):
 
     # Bonsai auto thinks at low effort for images; local Qwen auto stays off.
     auto_visual_effort: str | None = "low"
+    # max_tokens of the request being built; None outside complete().
+    _max_tokens: int | None = None
 
     def complete(self, **kwargs):
         # Short text polishing benefits most from no thinking; images and
         # sampled video frames get low effort so visible details are less
         # likely to be dropped. Explicit user choices always win.
         with self._lock:
+            self._max_tokens = int(kwargs.get("max_tokens", 1024))
             self._auto_visual = any(
                 isinstance(part, dict) and part.get("type") in {"image_url", "video_url"}
                 for message in kwargs.get("messages", [])
@@ -77,6 +80,21 @@ class _BonsaiHTTPBackend(OpenAICompatibleBackend):
         template["enable_thinking"] = enabled
         if effort is not None:
             extra_body["reasoning_effort"] = effort
+        budget = thinking_budget(self._max_tokens) if enabled else None
+        if budget is not None:
+            # Long instructions can make Bonsai think until max_tokens is spent
+            # and return no answer (seen with effort=low on a ~4k-char H3
+            # compiler prompt: 8192 tokens, 72 s, empty). Cap thinking so the
+            # server closes the think block and still leaves room to answer.
+            extra_body["thinking_budget_tokens"] = budget
+
+
+def thinking_budget(max_tokens: int | None) -> int | None:
+    """Thinking-token cap that keeps an answer reserve inside max_tokens."""
+    if not max_tokens or max_tokens <= 0:
+        return None
+    reserve = min(4096, max(768, int(max_tokens * 0.35)))
+    return max(256, max_tokens - reserve)
 
 
 def _free_loopback_port() -> int:

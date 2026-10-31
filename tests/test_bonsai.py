@@ -58,6 +58,30 @@ def test_bonsai_fast_defaults_and_reasoning(module, tmp_path, monkeypatch):
     backend.unload()
 
 
+def test_bonsai_thinking_budget_leaves_answer_room(module, monkeypatch):
+    backends = module("backends")
+    bonsai = module("bonsai_backend")
+    assert bonsai.thinking_budget(8192) == 8192 - 2867
+    assert bonsai.thinking_budget(4096) == 4096 - 1433
+    assert bonsai.thinking_budget(1024) == 256
+    assert bonsai.thinking_budget(20000) == 20000 - 4096
+    assert bonsai.thinking_budget(0) is None
+    api = bonsai._BonsaiHTTPBackend("http://127.0.0.1:12345/v1", "", "", "bonsai2-27b", 30)
+    seen = {}
+
+    def fake_complete(self, **kwargs):
+        body = {}
+        self._apply_reasoning(body, kwargs.get("thinking_mode"))
+        seen.update(body)
+
+    monkeypatch.setattr(backends.OpenAICompatibleBackend, "complete", fake_complete)
+    api.complete(messages=[{"role": "user", "content": "x"}], max_tokens=8192, thinking_mode="low")
+    assert seen["thinking_budget_tokens"] == 8192 - 2867
+    seen.clear()
+    api.complete(messages=[{"role": "user", "content": "x"}], max_tokens=8192, thinking_mode="off")
+    assert "thinking_budget_tokens" not in seen
+
+
 def test_empty_eos_retries_once_without_hiding_reasoning_exhaustion(module, tmp_path, monkeypatch):
     backends = module("backends")
     bonsai = module("bonsai_backend")
