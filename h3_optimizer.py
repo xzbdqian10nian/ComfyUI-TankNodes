@@ -328,9 +328,11 @@ def repair(text: str, mode: str, job: Job) -> str:
 
 
 # ------------------------------------------------------------------ backend call
-def _complete(backend: Any, messages: list[dict[str, Any]], *, max_tokens: int, thinking_mode: str, seed: int) -> tuple[str, dict]:
+def _complete(backend: Any, messages: list[dict[str, Any]], *, max_tokens: int, thinking_mode: str, seed: int,
+              sampling: dict[str, Any] | None = None) -> tuple[str, dict]:
     kwargs: dict[str, Any] = {"messages": messages, "max_tokens": int(max_tokens), "temperature": 0.6, "top_p": 0.95,
                               "top_k": 40, "min_p": 0.05, "repeat_penalty": 1.05, "seed": int(seed), "stream": False}
+    kwargs.update({k: v for k, v in (sampling or {}).items() if v is not None})
     # Same rule as VisionChat: only server/API backends take the unified thinking selector.
     if getattr(backend, "backend_kind", "") in {"openai_compatible", "local_bonsai_server", "local_llama_server"}:
         kwargs["thinking_mode"] = thinking_mode
@@ -342,11 +344,12 @@ def _complete(backend: Any, messages: list[dict[str, Any]], *, max_tokens: int, 
 
 
 def optimize(backend: Any, job: Job, *, thinking_mode: str = "medium", max_tokens: int = 6000, seed: int = 1234,
-             correction: bool = True) -> dict[str, Any]:
+             correction: bool = True, sampling: dict[str, Any] | None = None) -> dict[str, Any]:
     mode = resolve_mode(job)
     messages = build_messages(job, mode)
     started = time.perf_counter()
-    raw, usage = _complete(backend, messages, max_tokens=max_tokens, thinking_mode=thinking_mode, seed=seed)
+    raw, usage = _complete(backend, messages, max_tokens=max_tokens, thinking_mode=thinking_mode, seed=seed,
+                           sampling=sampling)
     draft = repair(raw, mode, job)
     issues = validate(draft, mode, job)
     report = {"mode": mode, "first_issues": issues, "corrected": False, "usage": [usage]}
@@ -355,7 +358,7 @@ def optimize(backend: Any, job: Job, *, thinking_mode: str = "medium", max_token
         fix = ("Your draft violates these hard requirements:\n- " + "\n- ".join(i["msg"] for i in hard)
                + "\n\nRewrite the complete prompt fixing only these problems and keep everything else. Output only the final prompt.")
         raw2, usage2 = _complete(backend, messages + [{"role": "assistant", "content": draft}, {"role": "user", "content": fix}],
-                                 max_tokens=max_tokens, thinking_mode=thinking_mode, seed=seed + 1)
+                                 max_tokens=max_tokens, thinking_mode=thinking_mode, seed=seed + 1, sampling=sampling)
         candidate = repair(raw2, mode, job)
         candidate_issues = validate(candidate, mode, job)
         report["usage"].append(usage2)

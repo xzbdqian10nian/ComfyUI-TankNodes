@@ -493,7 +493,7 @@
     "inputs": {
       "template": {
         "name": "模板",
-        "tooltip": "按目标模型和任务选择。"
+        "tooltip": "按目标模型和任务选择。H3 模板会走官方格式引擎并自动检查格式。"
       },
       "extra_rules": {
         "name": "附加规则",
@@ -508,11 +508,11 @@
   },
   "TankPromptOptimizer": {
     "display_name": "提示词优化 · Tank",
-    "description": "用本地模型按模板优化提示词。按接入的素材自动判断任务：只接首帧=图生视频，首尾帧都接=首尾帧视频，接参考图批次或视频=参考；秒数大于 0 才生效。",
+    "description": "用本地模型按模板优化提示词。按接入的素材自动判断任务：只接首帧=图生视频，首尾帧都接=首尾帧视频，接参考图或视频=参考；秒数大于 0 才生效。",
     "inputs": {
       "backend": {
         "name": "模型",
-        "tooltip": "连接「Qwen / Bonsai GGUF 加载器 · Tank」。"
+        "tooltip": "连接「Qwen / Bonsai GGUF 加载器 · Tank」，推荐 Bonsai-2 v2。"
       },
       "template": {
         "name": "模板",
@@ -520,51 +520,103 @@
       },
       "prompt": {
         "name": "提示词",
-        "tooltip": "连接提示词输入（多行文本）。台词用“引号”括起来会原样保留。"
+        "tooltip": "连接左边的「提示词输入」（多行文本）。台词用“引号”括起来会原样保留。"
       },
       "thinking_mode": {
         "name": "思考强度",
         "tooltip": "默认 high。回答写不完时会加大输出预算重试，不会降低思考强度。"
       },
-      "unload_after": {
-        "name": "用完卸载",
-        "tooltip": "写完后释放语言模型，把显存让给采样。"
+      "context_length": {
+        "name": "上下文长度",
+        "tooltip": "本地模型能看到的总长度（图片 + 模板 + 回答），默认 32768。"
+      },
+      "max_tokens": {
+        "name": "最大输出",
+        "tooltip": "思考 + 回答的输出上限，默认 10240。"
+      },
+      "temperature": {
+        "name": "温度",
+        "tooltip": "随机程度。越低越稳定，越高越多变。默认 0.6 是实测值，一般不用改。"
+      },
+      "top_p": {
+        "name": "Top P",
+        "tooltip": "只在累计概率达到这个比例的候选词里挑。一般不用改。"
+      },
+      "top_k": {
+        "name": "Top K",
+        "tooltip": "只在概率最高的 K 个词里挑，0 = 不限制。一般不用改。"
+      },
+      "min_p": {
+        "name": "Min P",
+        "tooltip": "概率低于最优词这个比例的候选词直接丢弃。一般不用改。"
+      },
+      "repeat_penalty": {
+        "name": "重复惩罚",
+        "tooltip": "大于 1 会减少重复用词。一般不用改。"
       },
       "seed": {
         "name": "种子",
-        "tooltip": "语言模型的采样种子。"
+        "tooltip": "语言模型的种子。输入和种子都相同，写出的提示词也相同。"
+      },
+      "unload_after": {
+        "name": "用完卸载",
+        "tooltip": "写完后释放语言模型，把显存让给后面的采样。"
       },
       "seconds": {
         "name": "秒数",
-        "tooltip": "成片时长。0 = 不使用；连上或填入大于 0 的数才生效。"
+        "tooltip": "成片时长。0 = 不使用；连上或填入大于 0 的数才生效，会写进提示词的时间轴。"
       },
       "first_frame": {
         "name": "首帧",
-        "tooltip": "只接首帧=图生视频；首尾帧都接=首尾帧视频。"
+        "tooltip": "只接首帧 = 图生视频；首尾帧都接 = 首尾帧视频。"
       },
       "last_frame": {
         "name": "尾帧",
         "tooltip": "尾帧图。"
       },
-      "reference_images": {
-        "name": "参考图（批次）",
-        "tooltip": "参考图批次；图像编辑时第 1 张是要改的图。"
+      "reference_image_1": {
+        "name": "参考图1",
+        "tooltip": "第 1 张参考图（保留原尺寸）。接了任意一张参考图就按「参考生视频」处理。H3 最多 9 张。"
+      },
+      "reference_image_2": {
+        "name": "参考图2",
+        "tooltip": "第 2 张参考图（保留原尺寸）。接了任意一张参考图就按「参考生视频」处理。H3 最多 9 张。"
+      },
+      "reference_image_3": {
+        "name": "参考图3",
+        "tooltip": "第 3 张参考图（保留原尺寸）。接了任意一张参考图就按「参考生视频」处理。H3 最多 9 张。"
+      },
+      "reference_image_4": {
+        "name": "参考图4",
+        "tooltip": "第 4 张参考图（保留原尺寸）。接了任意一张参考图就按「参考生视频」处理。H3 最多 9 张。"
+      },
+      "reference_image_5": {
+        "name": "参考图5",
+        "tooltip": "第 5 张参考图（保留原尺寸）。接了任意一张参考图就按「参考生视频」处理。H3 最多 9 张。"
+      },
+      "reference_image_6": {
+        "name": "参考图6",
+        "tooltip": "第 6 张参考图（保留原尺寸）。接了任意一张参考图就按「参考生视频」处理。H3 最多 9 张。"
+      },
+      "reference_image_7": {
+        "name": "参考图7",
+        "tooltip": "第 7 张参考图（保留原尺寸）。接了任意一张参考图就按「参考生视频」处理。H3 最多 9 张。"
+      },
+      "reference_image_8": {
+        "name": "参考图8",
+        "tooltip": "第 8 张参考图（保留原尺寸）。接了任意一张参考图就按「参考生视频」处理。H3 最多 9 张。"
+      },
+      "reference_image_9": {
+        "name": "参考图9",
+        "tooltip": "第 9 张参考图（保留原尺寸）。接了任意一张参考图就按「参考生视频」处理。H3 最多 9 张。"
       },
       "video_frames": {
         "name": "视频帧",
-        "tooltip": "源视频帧，自动抽 8 帧，用于编辑或动作参考。"
-      },
-      "max_tokens": {
-        "name": "最大输出 Token",
-        "tooltip": "思考 + 回答的输出上限，默认 10240。"
+        "tooltip": "源视频的帧，自动抽 8 帧，用于视频编辑或动作参考。"
       },
       "video_role": {
         "name": "视频用途",
-        "tooltip": "自动：没接参考图=编辑源视频，接了参考图=动作参考。视频编辑请选「edit source」。"
-      },
-      "context_length": {
-        "name": "上下文长度",
-        "tooltip": "本地模型的上下文窗口（图片 + 模板 + 回答），默认 32768。"
+        "tooltip": "auto：没接参考图 = 编辑源视频，接了参考图 = 动作参考。视频编辑请选 edit source。"
       }
     },
     "outputs": {
@@ -578,6 +630,83 @@
   },
   "TankImageBatch": {
     "display_name": "参考图打包 · Tank",
-    "description": "把最多 9 张参考图打成一个批次给提示词优化；没接或被关掉的图自动跳过，一张都没有时输出为空，不报错。"
+    "description": "把最多 9 张图打成一个批次；没接或被关掉的图自动跳过，一张都没有时输出为空，不报错。",
+    "inputs": {
+      "image1": {
+        "name": "图1",
+        "tooltip": "第 1 张图（可选，没接或被关掉就跳过）。"
+      },
+      "image2": {
+        "name": "图2",
+        "tooltip": "第 2 张图（可选，没接或被关掉就跳过）。"
+      },
+      "image3": {
+        "name": "图3",
+        "tooltip": "第 3 张图（可选，没接或被关掉就跳过）。"
+      },
+      "image4": {
+        "name": "图4",
+        "tooltip": "第 4 张图（可选，没接或被关掉就跳过）。"
+      },
+      "image5": {
+        "name": "图5",
+        "tooltip": "第 5 张图（可选，没接或被关掉就跳过）。"
+      },
+      "image6": {
+        "name": "图6",
+        "tooltip": "第 6 张图（可选，没接或被关掉就跳过）。"
+      },
+      "image7": {
+        "name": "图7",
+        "tooltip": "第 7 张图（可选，没接或被关掉就跳过）。"
+      },
+      "image8": {
+        "name": "图8",
+        "tooltip": "第 8 张图（可选，没接或被关掉就跳过）。"
+      },
+      "image9": {
+        "name": "图9",
+        "tooltip": "第 9 张图（可选，没接或被关掉就跳过）。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "图像"
+      }
+    }
+  },
+  "TankQwen21PromptEngineering": {
+    "display_name": "千问2.1 Image 提示词工程 · Tank",
+    "description": "输出千问 Image 2.1 官方提示词增强（PE）的系统提示词，接到「本地多模态对话 · Tank」的系统提示上；用户提示词和图片接到对话节点。",
+    "inputs": {
+      "task": {
+        "name": "任务",
+        "tooltip": "文生图（text-to-image）或图像编辑（image edit），对应官方两套 PE 规则。"
+      },
+      "extra_rules": {
+        "name": "附加规则",
+        "tooltip": "可选，追加在官方规则后面。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "系统提示词"
+      }
+    }
+  },
+  "TankMossPromptEngineering": {
+    "display_name": "MOSS 提示词工程 · Tank",
+    "description": "输出 MOSS-Image 官方提示词增强的系统提示词，接到「本地多模态对话 · Tank」的系统提示上。",
+    "inputs": {
+      "extra_rules": {
+        "name": "附加规则",
+        "tooltip": "可选，追加在官方规则后面。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "系统提示词"
+      }
+    }
   }
 }

@@ -99,6 +99,9 @@ class TankPromptOptimizer:
 
     @classmethod
     def INPUT_TYPES(cls):
+        refs = {f"reference_image_{i}": ("IMAGE", {"tooltip": f"Reference picture {i} (kept at its own size). "
+                                                             "Any reference picture makes this a reference task."})
+                for i in range(1, 10)}
         return {
             "required": {
                 "backend": ("VISION_LLM_BACKEND", {"tooltip": "Connect Qwen / Bonsai GGUF Loader · Tank (Bonsai-2 v2)."}),
@@ -107,23 +110,33 @@ class TankPromptOptimizer:
                 "thinking_mode": (list(REASONING_CHOICES), {"default": "high",
                                   "tooltip": "Thinking effort. Kept as chosen: if the answer runs out of tokens the node "
                                              "retries with a bigger budget, never with less thinking."}),
+                "context_length": ("INT", {"default": 32768, "min": 8192, "max": 131072, "step": 1024, "advanced": True,
+                                           "tooltip": "Context window for the local model (pictures + template + answer)."}),
+                "max_tokens": ("INT", {"default": 10240, "min": 512, "max": 32768, "step": 16,
+                                       "tooltip": "Output budget (thinking + answer)."}),
+                "temperature": ("FLOAT", {"default": 0.6, "min": 0.0, "max": 2.0, "step": 0.05, "advanced": True,
+                                          "tooltip": "Randomness. Lower is steadier, higher is more varied. 0.6 is the tested default."}),
+                "top_p": ("FLOAT", {"default": 0.95, "min": 0.0, "max": 1.0, "step": 0.01, "advanced": True,
+                                    "tooltip": "Nucleus sampling: only the most likely words covering this share are considered."}),
+                "top_k": ("INT", {"default": 40, "min": 0, "max": 200, "advanced": True,
+                                  "tooltip": "Only the K most likely words are considered. 0 = no limit."}),
+                "min_p": ("FLOAT", {"default": 0.05, "min": 0.0, "max": 1.0, "step": 0.01, "advanced": True,
+                                    "tooltip": "Drop words whose probability is below this share of the best word."}),
+                "repeat_penalty": ("FLOAT", {"default": 1.05, "min": 0.5, "max": 2.0, "step": 0.01, "advanced": True,
+                                             "tooltip": "Above 1 discourages repeating the same words."}),
+                "seed": ("INT", {"default": 1234, "min": 0, "max": 2**31 - 1,
+                                 "tooltip": "Language-model seed. Same inputs + same seed = same prompt."}),
                 "unload_after": ("BOOLEAN", {"default": True, "tooltip": "Release the language model afterwards so sampling gets the VRAM."}),
-                "seed": ("INT", {"default": 1234, "min": 0, "max": 2**31 - 1}),
             },
             "optional": {
                 "seconds": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 120.0, "step": 0.01,
                                       "tooltip": "Target duration. 0 = not used; connect or type a value to use it."}),
                 "first_frame": ("IMAGE", {"tooltip": "First frame. Alone: image-to-video; with last frame: first/last-frame video."}),
                 "last_frame": ("IMAGE", {"tooltip": "Last frame."}),
-                "reference_images": ("IMAGE", {"tooltip": "Reference pictures as one IMAGE batch -> reference task. For image "
-                                                         "editing, picture 1 is the image being edited."}),
+                **refs,
                 "video_frames": ("IMAGE", {"tooltip": "Frames of a source video (sampled to 8) for editing / motion reference."}),
                 "video_role": (["auto", "edit source", "motion reference"], {"default": "auto",
                                "tooltip": "auto: editing without reference pictures, motion reference with them."}),
-                "max_tokens": ("INT", {"default": 10240, "min": 512, "max": 32768,
-                                       "tooltip": "Output budget (thinking + answer)."}),
-                "context_length": ("INT", {"default": 32768, "min": 8192, "max": 131072, "step": 1024,
-                                           "tooltip": "Context window for the local model (pictures + template + answer)."}),
             },
         }
 
@@ -132,13 +145,17 @@ class TankPromptOptimizer:
     FUNCTION = "run"
     CATEGORY = "TankNodes/Prompt"
     DESCRIPTION = ("Optimizes a prompt with a local Tank model following the connected template. The task is inferred from "
-                   "the connected media; seconds is used only when > 0.")
+                   "the connected media (first/last frame, up to 9 reference pictures, video); seconds is used only when > 0.")
 
-    def run(self, backend, template, prompt, thinking_mode, unload_after, seed, seconds=0.0, first_frame=None,
-            last_frame=None, reference_images=None, video_frames=None, max_tokens=10240, video_role="auto",
-            context_length=32768):
+    def run(self, backend, template, prompt, thinking_mode, context_length=32768, max_tokens=10240, temperature=0.6,
+            top_p=0.95, top_k=40, min_p=0.05, repeat_penalty=1.05, seed=1234, unload_after=True, seconds=0.0,
+            first_frame=None, last_frame=None, video_frames=None, video_role="auto", **kwargs):
         if backend is None or not callable(getattr(backend, "complete", None)):
             raise ValueError("Connect Qwen / Bonsai GGUF Loader · Tank to backend.")
+        refs = [kwargs.get(f"reference_image_{i}") for i in range(1, 10)]
+        refs = [r for r in refs if r is not None]
+        sampling = {"temperature": float(temperature), "top_p": float(top_p), "top_k": int(top_k), "min_p": float(min_p),
+                    "repeat_penalty": float(repeat_penalty)}
         request = str(prompt or "").strip()
         tpl = str(template or "")
         secs = float(seconds or 0.0)
@@ -153,11 +170,11 @@ class TankPromptOptimizer:
                     configure(max(int(context_length), budget + 8192), thinking_mode)
                 try:
                     if tpl.lstrip().startswith(H3_MARKER):
-                        prompt_out, report = self._h3(backend, request, secs, first_frame, last_frame, reference_images,
-                                                      video_frames, thinking_mode, budget, int(seed), video_role)
+                        prompt_out, report = self._h3(backend, request, secs, first_frame, last_frame, refs, video_frames,
+                                                      thinking_mode, budget, int(seed), video_role, sampling)
                     else:
-                        prompt_out, report = self._generic(backend, tpl, request, secs, first_frame, last_frame,
-                                                           reference_images, video_frames, thinking_mode, budget, int(seed))
+                        prompt_out, report = self._generic(backend, tpl, request, secs, first_frame, last_frame, refs,
+                                                           video_frames, thinking_mode, budget, int(seed), sampling)
                     if attempt:
                         report += "\n" + f"answer needed a bigger budget: max_tokens={budget}"
                     break
@@ -168,37 +185,37 @@ class TankPromptOptimizer:
         finally:
             if unload_after and callable(getattr(backend, "unload", None)):
                 backend.unload()
-        report += f"\ntime={time.perf_counter() - started:.1f}s"
+        report += "\n" + f"time={time.perf_counter() - started:.1f}s"
         print(f"[TankNodes] prompt optimizer: {report.splitlines()[0]} {report.splitlines()[-1]}")
         if not prompt_out.strip():
-            prompt_out, report = request, report + "\nempty answer -> original prompt used"
+            prompt_out, report = request, report + "\n" + "empty answer -> original prompt used"
         return {"ui": {"text": (prompt_out + "\n\n---\n" + report,)}, "result": (prompt_out, report)}
 
     # -------------------------------------------------------------- H3 official format
-    def _h3(self, backend, request, secs, first, last, refs, video, thinking, max_tokens, seed, video_role="auto"):
+    def _h3(self, backend, request, secs, first, last, refs, video, thinking, max_tokens, seed, video_role, sampling):
         assets: list[Asset] = []
         for role, batch in (("first_frame", first), ("last_frame", last)):
             for urls in _frames_to_urls(batch)[:1]:
                 assets.append(Asset("picture", role, "", urls))
-        for urls in _frames_to_urls(refs):
-            assets.append(Asset("picture", "reference", "", urls))
+        for ref in refs:
+            for urls in _frames_to_urls(ref)[:1]:
+                assets.append(Asset("picture", "reference", "", urls))
         if video is not None:
-            role = {"edit source": "editing", "motion reference": "motion"}.get(video_role,
-                                                                              "motion" if refs is not None else "editing")
+            role = {"edit source": "editing", "motion reference": "motion"}.get(video_role, "motion" if refs else "editing")
             assets.append(Asset("video", role, "", [u[0] for u in _frames_to_urls(video, 8)]))
         duration = secs if secs > 0 else 5.0
         result = optimize(backend, Job(request, duration, assets, "auto"), thinking_mode=thinking, max_tokens=max_tokens,
-                          seed=seed, correction=True)
+                          seed=seed, correction=True, sampling=sampling)
         hard = [i for i in result["issues"] if i["hard"]]
-        lines = [f"template=H3 mode={result['mode']}", f"seconds={'%.2f' % secs if secs > 0 else 'not used (5.00 assumed)'}",
+        secs_text = ("%.2f" % secs) if secs > 0 else "not used (5.00 assumed)"
+        lines = [f"template=H3 mode={result['mode']} references={len(refs)}", "seconds=" + secs_text,
                  f"corrected={result['corrected']} final_hard_issues={len(hard)}"]
         lines += [f"- {i['code']}: {i['msg']}" for i in result["issues"]]
         return result["prompt"], "\n".join(lines)
 
     # -------------------------------------------------------------- any other template
-    def _generic(self, backend, tpl, request, secs, first, last, refs, video, thinking, max_tokens, seed):
+    def _generic(self, backend, tpl, request, secs, first, last, refs, video, thinking, max_tokens, seed, sampling):
         content: list[dict[str, Any]] = []
-        roles: list[str] = []
         n = 0
 
         def add(label: str, batch, limit=None):
@@ -207,27 +224,79 @@ class TankPromptOptimizer:
                 n += 1
                 content.append({"type": "text", "text": f"<image{n}> ({label}):"})
                 content.append({"type": "image_url", "image_url": {"url": urls[0]}})
-                roles.append(label)
 
         add("first frame", first)
         add("last frame", last)
-        add("reference / input picture", refs)
+        for ref in refs:
+            add("reference / input picture", ref)
         add("source video frame", video, 8)
         task = ("first/last-frame video" if first is not None and last is not None else "image-to-video" if first is not None
-                else "reference" if refs is not None or video is not None else "text-only")
+                else "reference" if refs or video is not None else "text-only")
         context = []
         if secs > 0:
-            context.append(f"Target duration: {secs:.2f} seconds.")
+            context.append("Target duration: %.2f seconds." % secs)
         if n:
             context.append(f"{n} picture(s) are attached, numbered <image1>…<image{n}> in the order shown.")
         user = (("\n".join(context) + "\n\n") if context else "") + "User request:\n" + request
         content.append({"type": "text", "text": user})
         messages = ([{"role": "system", "content": tpl}] if tpl.strip() else []) + [{"role": "user", "content": content}]
-        raw, _usage = _complete(backend, messages, max_tokens=max_tokens, thinking_mode=thinking, seed=seed)
+        raw, _usage = _complete(backend, messages, max_tokens=max_tokens, thinking_mode=thinking, seed=seed, sampling=sampling)
         out = _clean(raw)
-        report = "\n".join([f"template=generic task={task}", f"pictures={n}",
-                            f"seconds={'%.2f' % secs if secs > 0 else 'not used'}"])
+        secs_text = ("%.2f" % secs) if secs > 0 else "not used"
+        report = "\n".join([f"template=generic task={task}", f"pictures={n}", "seconds=" + secs_text])
         return out, report
+
+
+QWEN21_PLAIN_OUTPUT = (
+    "\n\n---\nOutput format for this workflow: reply with the rewritten prompt text only - exactly what you would put in "
+    "rewritten_prompt - with no JSON, no field names, no explanation.\n")
+
+
+class TankQwen21PromptEngineering:
+    """Official Qwen-Image 2.1 prompt-enhancer system prompt (T2I or edit), for Local Multimodal Chat · Tank."""
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {"task": (["text-to-image", "image edit"], {"default": "image edit",
+                                 "tooltip": "Which official Qwen-Image 2.1 prompt enhancer to use."})},
+                "optional": {"extra_rules": ("STRING", {"multiline": True, "default": "",
+                                                        "tooltip": "Optional house rules appended after the official text."})}}
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("system_prompt",)
+    FUNCTION = "run"
+    CATEGORY = "TankNodes/Prompt"
+    DESCRIPTION = ("Outputs the official Qwen-Image 2.1 prompt-enhancer instructions (text-to-image or edit). Connect it to "
+                   "Local Multimodal Chat · Tank as the system prompt; the user prompt and pictures go into the chat node.")
+
+    def run(self, task, extra_rules=""):
+        name = "qwen21_t2i_official_pe.txt" if task == "text-to-image" else "qwen21_edit_official_pe.txt"
+        with open(os.path.join(_TEMPLATE_DIR, name), encoding="utf-8") as handle:
+            text = handle.read().rstrip() + QWEN21_PLAIN_OUTPUT
+        extra = str(extra_rules or "").strip()
+        return (text + ("\nAdditional rules:\n" + extra if extra else ""),)
+
+
+class TankMossPromptEngineering:
+    """Official MOSS-Image prompt-enhancer system prompt, for Local Multimodal Chat · Tank."""
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {}, "optional": {"extra_rules": ("STRING", {"multiline": True, "default": "",
+                                                        "tooltip": "Optional house rules appended after the official text."})}}
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("system_prompt",)
+    FUNCTION = "run"
+    CATEGORY = "TankNodes/Prompt"
+    DESCRIPTION = ("Outputs the official MOSS-Image prompt-enhancer instructions. Connect it to Local Multimodal Chat · Tank "
+                   "as the system prompt; the user prompt (and optional pictures) go into the chat node.")
+
+    def run(self, extra_rules=""):
+        with open(os.path.join(_TEMPLATE_DIR, "moss_t2i_official.txt"), encoding="utf-8") as handle:
+            text = handle.read().rstrip()
+        extra = str(extra_rules or "").strip()
+        return (text + ("\n\nAdditional rules:\n" + extra if extra else ""),)
 
 
 class TankImageBatch:
@@ -236,7 +305,8 @@ class TankImageBatch:
 
     @classmethod
     def INPUT_TYPES(cls):
-        return {"required": {}, "optional": {f"image{i}": ("IMAGE",) for i in range(1, 10)}}
+        return {"required": {}, "optional": {f"image{i}": ("IMAGE", {"tooltip": f"Picture {i} (optional; skipped when empty or bypassed)."})
+                                             for i in range(1, 10)}}
 
     RETURN_TYPES = ("IMAGE",)
     RETURN_NAMES = ("images",)

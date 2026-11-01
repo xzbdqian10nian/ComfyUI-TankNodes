@@ -490,25 +490,223 @@
   "TankPromptTemplate": {
     "display_name": "Prompt Template · Tank",
     "description": "Prompt-engineering template for Prompt Optimizer · Tank.",
-    "outputs": {}
+    "inputs": {
+      "template": {
+        "name": "template",
+        "tooltip": "Pick by target model and task. H3 templates use the official-format engine with checks."
+      },
+      "extra_rules": {
+        "name": "extra rules",
+        "tooltip": "Optional, one rule per line, appended to the template."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "template"
+      }
+    }
   },
   "TankPromptOptimizer": {
     "display_name": "Prompt Optimizer · Tank",
-    "description": "Optimizes a prompt with a local model following the template; task inferred from connected media.",
-    "outputs": {},
+    "description": "Optimizes a prompt with a local model following the template; the task is inferred from the connected media; seconds is used only when > 0.",
     "inputs": {
-      "video_role": {
-        "name": "video role",
-        "tooltip": "auto: edit source without reference pictures, motion reference with them."
+      "backend": {
+        "name": "backend",
+        "tooltip": "Connect Qwen / Bonsai GGUF Loader · Tank (Bonsai-2 v2 recommended)."
+      },
+      "template": {
+        "name": "template",
+        "tooltip": "Connect Prompt Template · Tank."
+      },
+      "prompt": {
+        "name": "prompt",
+        "tooltip": "Connect the prompt input (a multiline text node). Lines in quotes are kept verbatim."
+      },
+      "thinking_mode": {
+        "name": "thinking",
+        "tooltip": "Default high. If the answer runs out of tokens the node retries with a bigger budget, never with less thinking."
       },
       "context_length": {
         "name": "context length",
-        "tooltip": "Context window for the local model."
+        "tooltip": "Context window for the local model (pictures + template + answer). Default 32768."
+      },
+      "max_tokens": {
+        "name": "max tokens",
+        "tooltip": "Output budget (thinking + answer). Default 10240."
+      },
+      "temperature": {
+        "name": "temperature",
+        "tooltip": "Randomness. Lower is steadier, higher is more varied. 0.6 is the tested default."
+      },
+      "top_p": {
+        "name": "top p",
+        "tooltip": "Nucleus sampling share. Usually left alone."
+      },
+      "top_k": {
+        "name": "top k",
+        "tooltip": "Only the K most likely words are considered; 0 = no limit. Usually left alone."
+      },
+      "min_p": {
+        "name": "min p",
+        "tooltip": "Drop words below this share of the best word's probability. Usually left alone."
+      },
+      "repeat_penalty": {
+        "name": "repeat penalty",
+        "tooltip": "Above 1 discourages repeating words. Usually left alone."
+      },
+      "seed": {
+        "name": "seed",
+        "tooltip": "Language-model seed. Same inputs + same seed = same prompt."
+      },
+      "unload_after": {
+        "name": "unload after",
+        "tooltip": "Release the language model afterwards so sampling gets the VRAM."
+      },
+      "seconds": {
+        "name": "seconds",
+        "tooltip": "Target duration. 0 = not used; connect or type a value above 0 to use it."
+      },
+      "first_frame": {
+        "name": "first frame",
+        "tooltip": "First frame alone = image-to-video; with a last frame = first/last-frame video."
+      },
+      "last_frame": {
+        "name": "last frame",
+        "tooltip": "Last frame."
+      },
+      "reference_image_1": {
+        "name": "reference image 1",
+        "tooltip": "Reference picture 1 (kept at its own size). Any reference picture makes this a reference task. H3 takes up to 9."
+      },
+      "reference_image_2": {
+        "name": "reference image 2",
+        "tooltip": "Reference picture 2 (kept at its own size). Any reference picture makes this a reference task. H3 takes up to 9."
+      },
+      "reference_image_3": {
+        "name": "reference image 3",
+        "tooltip": "Reference picture 3 (kept at its own size). Any reference picture makes this a reference task. H3 takes up to 9."
+      },
+      "reference_image_4": {
+        "name": "reference image 4",
+        "tooltip": "Reference picture 4 (kept at its own size). Any reference picture makes this a reference task. H3 takes up to 9."
+      },
+      "reference_image_5": {
+        "name": "reference image 5",
+        "tooltip": "Reference picture 5 (kept at its own size). Any reference picture makes this a reference task. H3 takes up to 9."
+      },
+      "reference_image_6": {
+        "name": "reference image 6",
+        "tooltip": "Reference picture 6 (kept at its own size). Any reference picture makes this a reference task. H3 takes up to 9."
+      },
+      "reference_image_7": {
+        "name": "reference image 7",
+        "tooltip": "Reference picture 7 (kept at its own size). Any reference picture makes this a reference task. H3 takes up to 9."
+      },
+      "reference_image_8": {
+        "name": "reference image 8",
+        "tooltip": "Reference picture 8 (kept at its own size). Any reference picture makes this a reference task. H3 takes up to 9."
+      },
+      "reference_image_9": {
+        "name": "reference image 9",
+        "tooltip": "Reference picture 9 (kept at its own size). Any reference picture makes this a reference task. H3 takes up to 9."
+      },
+      "video_frames": {
+        "name": "video frames",
+        "tooltip": "Source video frames (8 are sampled) for editing or motion reference."
+      },
+      "video_role": {
+        "name": "video role",
+        "tooltip": "auto: edit source without reference pictures, motion reference with them."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "prompt"
+      },
+      "1": {
+        "name": "report"
       }
     }
   },
   "TankImageBatch": {
     "display_name": "Image Batch (optional inputs) · Tank",
-    "description": "Batches optional pictures; skips empty inputs."
+    "description": "Batches up to 9 optional pictures; skips empty inputs and outputs nothing when none are connected.",
+    "inputs": {
+      "image1": {
+        "name": "image 1",
+        "tooltip": "Picture 1 (optional; skipped when empty or bypassed)."
+      },
+      "image2": {
+        "name": "image 2",
+        "tooltip": "Picture 2 (optional; skipped when empty or bypassed)."
+      },
+      "image3": {
+        "name": "image 3",
+        "tooltip": "Picture 3 (optional; skipped when empty or bypassed)."
+      },
+      "image4": {
+        "name": "image 4",
+        "tooltip": "Picture 4 (optional; skipped when empty or bypassed)."
+      },
+      "image5": {
+        "name": "image 5",
+        "tooltip": "Picture 5 (optional; skipped when empty or bypassed)."
+      },
+      "image6": {
+        "name": "image 6",
+        "tooltip": "Picture 6 (optional; skipped when empty or bypassed)."
+      },
+      "image7": {
+        "name": "image 7",
+        "tooltip": "Picture 7 (optional; skipped when empty or bypassed)."
+      },
+      "image8": {
+        "name": "image 8",
+        "tooltip": "Picture 8 (optional; skipped when empty or bypassed)."
+      },
+      "image9": {
+        "name": "image 9",
+        "tooltip": "Picture 9 (optional; skipped when empty or bypassed)."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "images"
+      }
+    }
+  },
+  "TankQwen21PromptEngineering": {
+    "display_name": "Qwen-Image 2.1 Prompt Engineering · Tank",
+    "description": "Official Qwen-Image 2.1 prompt-enhancer system prompt for Local Multimodal Chat · Tank.",
+    "inputs": {
+      "task": {
+        "name": "task",
+        "tooltip": "text-to-image or image edit: the two official PE rule sets."
+      },
+      "extra_rules": {
+        "name": "extra rules",
+        "tooltip": "Optional, appended after the official text."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "system prompt"
+      }
+    }
+  },
+  "TankMossPromptEngineering": {
+    "display_name": "MOSS-Image Prompt Engineering · Tank",
+    "description": "Official MOSS-Image prompt-enhancer system prompt for Local Multimodal Chat · Tank.",
+    "inputs": {
+      "extra_rules": {
+        "name": "extra rules",
+        "tooltip": "Optional, appended after the official text."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "system prompt"
+      }
+    }
   }
 }
