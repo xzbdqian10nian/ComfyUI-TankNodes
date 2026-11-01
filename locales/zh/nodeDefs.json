@@ -489,7 +489,7 @@
   },
   "TankPromptTemplate": {
     "display_name": "提示词模板 · Tank",
-    "description": "选择提示词工程模板（H3 官方 / 千问2.1 官方 PE / MOSS 官方 / 通用），输出给「提示词优化 · Tank」。",
+    "description": "选择提示词工程模板（H3 官方 / Qwen2.1 官方 PE / MOSS 官方 / 通用），输出给「提示词优化 · Tank」。",
     "inputs": {
       "template": {
         "name": "模板",
@@ -676,8 +676,8 @@
     }
   },
   "TankQwen21PromptEngineering": {
-    "display_name": "千问2.1 Image 提示词工程 · Tank",
-    "description": "输出千问 Image 2.1 官方提示词增强（PE）的系统提示词，接到「本地多模态对话 · Tank」的系统提示上；用户提示词和图片接到对话节点。",
+    "display_name": "Qwen-Image 2.1 提示词工程 · Tank",
+    "description": "输出 Qwen-Image 2.1 官方提示词增强（PE）的系统提示词，接到「本地多模态对话 · Tank」的系统提示上；用户提示词和图片接到对话节点。",
     "inputs": {
       "task": {
         "name": "任务",
