@@ -370,5 +370,121 @@
         "tooltip": "实际输出的项数。"
       }
     }
+  },
+  "TankH3PromptOptimizer": {
+    "display_name": "H3 提示词优化器 · Tank",
+    "description": "用本地模型把描述写成符合 MiniMax H3 官方提示词规范的提示词（文生/图生/首尾帧/尾帧/全参考），并自动检查和修正格式。",
+    "inputs": {
+      "backend": {
+        "name": "模型",
+        "tooltip": "连接「Qwen / Bonsai GGUF 加载器 · Tank」，推荐 Bonsai-2 v2。"
+      },
+      "request": {
+        "name": "描述",
+        "tooltip": "想要的画面和情节，中文即可。台词用“引号”括起来，会原样保留。"
+      },
+      "mode": {
+        "name": "模式",
+        "tooltip": "auto 会根据接入的素材自动选择官方 H3 模式。"
+      },
+      "duration_seconds": {
+        "name": "时长（秒）",
+        "tooltip": "成片时长；把输出连到 H3 节点，保证两边一致。"
+      },
+      "thinking_mode": {
+        "name": "思考强度",
+        "tooltip": "medium 是实测推荐值；off 最快但质量较弱。"
+      },
+      "correction": {
+        "name": "自动纠正",
+        "tooltip": "初稿不符合官方格式时，让模型按问题清单重写一次，只有问题变少才采用。"
+      },
+      "unload_after": {
+        "name": "用完卸载",
+        "tooltip": "写完后释放语言模型，把显存让给 H3 采样。"
+      },
+      "seed": {
+        "name": "种子",
+        "tooltip": "语言模型的采样种子。"
+      },
+      "first_frame": {
+        "name": "首帧",
+        "tooltip": "首帧图（图生、首尾帧，或全参考里的关键帧）。"
+      },
+      "last_frame": {
+        "name": "尾帧",
+        "tooltip": "尾帧图（尾帧、首尾帧，或全参考里的关键帧）。"
+      },
+      "reference_image_1": {
+        "name": "参考图1",
+        "tooltip": "全参考模式的第 1 张参考图；分开接入可保留每张图原本的尺寸。"
+      },
+      "reference_image_2": {
+        "name": "参考图2",
+        "tooltip": "全参考模式的第 2 张参考图；分开接入可保留每张图原本的尺寸。"
+      },
+      "reference_image_3": {
+        "name": "参考图3",
+        "tooltip": "全参考模式的第 3 张参考图；分开接入可保留每张图原本的尺寸。"
+      },
+      "reference_image_4": {
+        "name": "参考图4",
+        "tooltip": "全参考模式的第 4 张参考图；分开接入可保留每张图原本的尺寸。"
+      },
+      "reference_image_5": {
+        "name": "参考图5",
+        "tooltip": "全参考模式的第 5 张参考图；分开接入可保留每张图原本的尺寸。"
+      },
+      "reference_image_6": {
+        "name": "参考图6",
+        "tooltip": "全参考模式的第 6 张参考图；分开接入可保留每张图原本的尺寸。"
+      },
+      "reference_images": {
+        "name": "参考图批次",
+        "tooltip": "额外的参考图批次（尺寸需一致），编号排在参考图1–6之后。"
+      },
+      "reference_notes": {
+        "name": "参考图备注",
+        "tooltip": "可选，按参考图顺序每行写一张，例如：男主 / 80年代院子 / 断绝关系书。"
+      },
+      "source_video_frames": {
+        "name": "源视频帧",
+        "tooltip": "源视频的帧，用于视频编辑、续拍或动作运镜参考。"
+      },
+      "source_video_role": {
+        "name": "源视频用途",
+        "tooltip": "源视频在任务中的作用。"
+      },
+      "reference_audio_note": {
+        "name": "参考音频说明",
+        "tooltip": "如果用了参考音频，写明它的用途（模型听不到声音），例如：男主音色参考。"
+      },
+      "max_tokens": {
+        "name": "最大 Token",
+        "tooltip": "输出预算，包含思考部分。"
+      },
+      "context_length": {
+        "name": "上下文长度",
+        "tooltip": "官方指南加图片大约需要 16–32K。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "H3 提示词",
+        "tooltip": "符合官方格式的 H3 提示词，接 H3 条件节点。"
+      },
+      "1": {
+        "name": "时长（秒）",
+        "tooltip": "与输入相同的时长。"
+      },
+      "2": {
+        "name": "时长（整数）",
+        "tooltip": "取整后的秒数。"
+      },
+      "3": {
+        "name": "检查报告",
+        "tooltip": "模式、检查结果、是否纠正、耗时。"
+      }
+    }
   }
 }

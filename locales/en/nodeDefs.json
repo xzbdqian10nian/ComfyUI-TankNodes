@@ -370,5 +370,121 @@
         "tooltip": "Number of items output."
       }
     }
+  },
+  "TankH3PromptOptimizer": {
+    "display_name": "H3 Prompt Optimizer · Tank",
+    "description": "Writes MiniMax H3 prompts in the official H3 prompt-writing format (T2VA / I2VA / FL2VA / L2VA / Ref2VA) with a local model, then checks and repairs the format.",
+    "inputs": {
+      "backend": {
+        "name": "model",
+        "tooltip": "Connect Qwen / Bonsai GGUF Loader · Tank (Bonsai-2 v2 recommended)."
+      },
+      "request": {
+        "name": "request",
+        "tooltip": "What should happen, in plain Chinese or English. Put spoken lines in “quotes”; they are kept verbatim."
+      },
+      "mode": {
+        "name": "mode",
+        "tooltip": "auto picks the official H3 mode from the connected media."
+      },
+      "duration_seconds": {
+        "name": "duration (s)",
+        "tooltip": "Target video length; connect the output to the H3 node so both agree."
+      },
+      "thinking_mode": {
+        "name": "thinking",
+        "tooltip": "medium is the tested default; off is fastest but weaker."
+      },
+      "correction": {
+        "name": "auto correction",
+        "tooltip": "If the draft breaks the official format, ask the model once to fix it (kept only if it improves)."
+      },
+      "unload_after": {
+        "name": "unload after",
+        "tooltip": "Release the language model afterwards so H3 sampling gets the VRAM."
+      },
+      "seed": {
+        "name": "seed",
+        "tooltip": "Sampling seed of the language model."
+      },
+      "first_frame": {
+        "name": "first frame",
+        "tooltip": "First frame (I2VA / FL2VA, or a keyframe in a reference task)."
+      },
+      "last_frame": {
+        "name": "last frame",
+        "tooltip": "Last frame (L2VA / FL2VA, or a keyframe in a reference task)."
+      },
+      "reference_image_1": {
+        "name": "reference image 1",
+        "tooltip": "Reference picture 1 for Ref2VA; separate inputs keep each picture's own size."
+      },
+      "reference_image_2": {
+        "name": "reference image 2",
+        "tooltip": "Reference picture 2 for Ref2VA; separate inputs keep each picture's own size."
+      },
+      "reference_image_3": {
+        "name": "reference image 3",
+        "tooltip": "Reference picture 3 for Ref2VA; separate inputs keep each picture's own size."
+      },
+      "reference_image_4": {
+        "name": "reference image 4",
+        "tooltip": "Reference picture 4 for Ref2VA; separate inputs keep each picture's own size."
+      },
+      "reference_image_5": {
+        "name": "reference image 5",
+        "tooltip": "Reference picture 5 for Ref2VA; separate inputs keep each picture's own size."
+      },
+      "reference_image_6": {
+        "name": "reference image 6",
+        "tooltip": "Reference picture 6 for Ref2VA; separate inputs keep each picture's own size."
+      },
+      "reference_images": {
+        "name": "reference batch",
+        "tooltip": "Extra reference pictures as one IMAGE batch (same size), numbered after reference image 1-6."
+      },
+      "reference_notes": {
+        "name": "reference notes",
+        "tooltip": "Optional, one line per reference picture, e.g. 'lead actor' / '1980s courtyard'."
+      },
+      "source_video_frames": {
+        "name": "source video frames",
+        "tooltip": "Frames of a source video for editing, continuation or motion reference."
+      },
+      "source_video_role": {
+        "name": "source video role",
+        "tooltip": "How the source video is used."
+      },
+      "reference_audio_note": {
+        "name": "reference audio note",
+        "tooltip": "If an audio reference is used, describe its role (the model cannot hear it)."
+      },
+      "max_tokens": {
+        "name": "max tokens",
+        "tooltip": "Output budget including thinking."
+      },
+      "context_length": {
+        "name": "context length",
+        "tooltip": "The official guide plus pictures need about 16-32K tokens."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "H3 prompt",
+        "tooltip": "Official-format H3 prompt for the H3 conditioning node."
+      },
+      "1": {
+        "name": "duration (s)",
+        "tooltip": "Same duration as the input."
+      },
+      "2": {
+        "name": "duration (int)",
+        "tooltip": "Duration rounded to whole seconds."
+      },
+      "3": {
+        "name": "report",
+        "tooltip": "Mode, checks, correction and timing."
+      }
+    }
   }
 }
