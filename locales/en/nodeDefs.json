@@ -500,6 +500,10 @@
       "video_role": {
         "name": "video role",
         "tooltip": "auto: edit source without reference pictures, motion reference with them."
+      },
+      "context_length": {
+        "name": "context length",
+        "tooltip": "Context window for the local model."
       }
     }
   },

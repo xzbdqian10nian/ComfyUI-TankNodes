@@ -104,7 +104,9 @@ class TankPromptOptimizer:
                 "backend": ("VISION_LLM_BACKEND", {"tooltip": "Connect Qwen / Bonsai GGUF Loader · Tank (Bonsai-2 v2)."}),
                 "template": ("STRING", {"forceInput": True, "tooltip": "Connect Prompt Template · Tank."}),
                 "prompt": ("STRING", {"forceInput": True, "tooltip": "Connect your prompt (a multiline text node). Quoted lines are kept verbatim."}),
-                "thinking_mode": (list(REASONING_CHOICES), {"default": "medium"}),
+                "thinking_mode": (list(REASONING_CHOICES), {"default": "high",
+                                  "tooltip": "Thinking effort. Kept as chosen: if the answer runs out of tokens the node "
+                                             "retries with a bigger budget, never with less thinking."}),
                 "unload_after": ("BOOLEAN", {"default": True, "tooltip": "Release the language model afterwards so sampling gets the VRAM."}),
                 "seed": ("INT", {"default": 1234, "min": 0, "max": 2**31 - 1}),
             },
@@ -118,7 +120,10 @@ class TankPromptOptimizer:
                 "video_frames": ("IMAGE", {"tooltip": "Frames of a source video (sampled to 8) for editing / motion reference."}),
                 "video_role": (["auto", "edit source", "motion reference"], {"default": "auto",
                                "tooltip": "auto: editing without reference pictures, motion reference with them."}),
-                "max_tokens": ("INT", {"default": 6000, "min": 512, "max": 24000}),
+                "max_tokens": ("INT", {"default": 10240, "min": 512, "max": 32768,
+                                       "tooltip": "Output budget (thinking + answer)."}),
+                "context_length": ("INT", {"default": 32768, "min": 8192, "max": 131072, "step": 1024,
+                                           "tooltip": "Context window for the local model (pictures + template + answer)."}),
             },
         }
 
@@ -130,7 +135,8 @@ class TankPromptOptimizer:
                    "the connected media; seconds is used only when > 0.")
 
     def run(self, backend, template, prompt, thinking_mode, unload_after, seed, seconds=0.0, first_frame=None,
-            last_frame=None, reference_images=None, video_frames=None, max_tokens=6000, video_role="auto"):
+            last_frame=None, reference_images=None, video_frames=None, max_tokens=10240, video_role="auto",
+            context_length=32768):
         if backend is None or not callable(getattr(backend, "complete", None)):
             raise ValueError("Connect Qwen / Bonsai GGUF Loader · Tank to backend.")
         request = str(prompt or "").strip()
@@ -138,24 +144,27 @@ class TankPromptOptimizer:
         secs = float(seconds or 0.0)
         started = time.perf_counter()
         try:
-            # If the model spends the whole budget thinking, retry with less thinking instead of failing the run.
-            ladder = [thinking_mode] + [m for m in ("low", "off") if m in REASONING_CHOICES and m != thinking_mode]
-            last_error = None
-            for attempt, mode in enumerate(ladder):
+            budget = int(max_tokens)
+            # Never lower the thinking effort (quality drops). If the answer ran out of tokens, give it a bigger budget
+            # (and the context to hold it) and try again with the same thinking.
+            for attempt in range(3):
+                configure = getattr(backend, "configure_chat", None)
+                if callable(configure):
+                    configure(max(int(context_length), budget + 8192), thinking_mode)
                 try:
                     if tpl.lstrip().startswith(H3_MARKER):
                         prompt_out, report = self._h3(backend, request, secs, first_frame, last_frame, reference_images,
-                                                      video_frames, mode, int(max_tokens), int(seed), video_role)
+                                                      video_frames, thinking_mode, budget, int(seed), video_role)
                     else:
                         prompt_out, report = self._generic(backend, tpl, request, secs, first_frame, last_frame,
-                                                           reference_images, video_frames, mode, int(max_tokens), int(seed))
+                                                           reference_images, video_frames, thinking_mode, budget, int(seed))
                     if attempt:
-                        report += "\n" + f"retried with thinking={mode} (first attempt: {str(last_error)[:120]})"
+                        report += "\n" + f"answer needed a bigger budget: max_tokens={budget}"
                     break
-                except Exception as error:  # budget exhausted / empty answer -> try the next, cheaper mode
-                    last_error = error
-                    if attempt == len(ladder) - 1 or not re.search(r"budget|final answer|empty", str(error), re.I):
+                except Exception as error:
+                    if attempt == 2 or not re.search(r"budget|final answer|empty", str(error), re.I):
                         raise
+                    budget = min(32768, int(budget * 1.6))
         finally:
             if unload_after and callable(getattr(backend, "unload", None)):
                 backend.unload()

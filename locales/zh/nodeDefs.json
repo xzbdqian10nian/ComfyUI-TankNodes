@@ -524,7 +524,7 @@
       },
       "thinking_mode": {
         "name": "思考强度",
-        "tooltip": "medium 为推荐值。"
+        "tooltip": "默认 high。回答写不完时会加大输出预算重试，不会降低思考强度。"
       },
       "unload_after": {
         "name": "用完卸载",
@@ -555,12 +555,16 @@
         "tooltip": "源视频帧，自动抽 8 帧，用于编辑或动作参考。"
       },
       "max_tokens": {
-        "name": "最大 Token",
-        "tooltip": "输出长度上限。"
+        "name": "最大输出 Token",
+        "tooltip": "思考 + 回答的输出上限，默认 10240。"
       },
       "video_role": {
         "name": "视频用途",
         "tooltip": "自动：没接参考图=编辑源视频，接了参考图=动作参考。视频编辑请选「edit source」。"
+      },
+      "context_length": {
+        "name": "上下文长度",
+        "tooltip": "本地模型的上下文窗口（图片 + 模板 + 回答），默认 32768。"
       }
     },
     "outputs": {
