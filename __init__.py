@@ -4,7 +4,8 @@ from .api_nodes import VisionAPIDirect, VisionAPIEnv
 from .local_nodes import Qwen38VLLoader, VisionChat, VisionUnload
 from .text_nodes import TankTextSplit
 from .h3_optimizer import TankH3PromptOptimizer
-from .prompt_nodes import (TankImageBatch, TankMossPromptEngineering, TankPromptOptimizer, TankPromptTemplate,
+from .prompt_nodes import (TankImageBatch, TankMossPromptEngineering, TankOptionalImageDownscale, TankPromptOptimizer,
+                           TankPromptTemplate,
                            TankQwen21PromptEngineering)
 
 # These are persisted in existing workflows. Branding must not change them.
@@ -21,6 +22,7 @@ NODE_CLASS_MAPPINGS = {
     "TankImageBatch": TankImageBatch,
     "TankQwen21PromptEngineering": TankQwen21PromptEngineering,
     "TankMossPromptEngineering": TankMossPromptEngineering,
+    "TankOptionalImageDownscale": TankOptionalImageDownscale,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -36,6 +38,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "TankImageBatch": "Image Batch (optional inputs) · Tank",
     "TankQwen21PromptEngineering": "Qwen-Image 2.1 Prompt Engineering · Tank",
     "TankMossPromptEngineering": "MOSS-Image Prompt Engineering · Tank",
+    "TankOptionalImageDownscale": "Optional Image Downscale · Tank",
 }
 
 WEB_DIRECTORY = "./web"

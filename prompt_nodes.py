@@ -332,3 +332,34 @@ class TankImageBatch:
                 f = comfy.utils.common_upscale(f.movedim(-1, 1), w, h, "lanczos", "center").movedim(1, -1)
             out.append(f)
         return (torch.cat(out, dim=0),)
+
+
+class TankOptionalImageDownscale:
+    """Shrink a picture to at most `max_megapixels` (never enlarges). The picture is optional: with nothing connected
+    (or the loader bypassed / not uploaded) the output is None, so optional reference inputs downstream just see
+    nothing instead of failing."""
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {"max_megapixels": ("FLOAT", {"default": 1.2, "min": 0.1, "max": 16.0, "step": 0.05,
+                                                          "tooltip": "Pictures larger than this are shrunk (lanczos), smaller ones pass through."})},
+                "optional": {"image": ("IMAGE", {"tooltip": "Optional picture; empty input = no output."})}}
+
+    RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("image",)
+    FUNCTION = "run"
+    CATEGORY = "TankNodes/Image"
+    DESCRIPTION = "Optional picture → shrunk to at most N megapixels; outputs nothing when no picture is connected."
+
+    def run(self, max_megapixels, image=None):
+        import math
+        import comfy.utils
+        if image is None:
+            return (None,)
+        h, w = image.shape[1], image.shape[2]
+        limit = max_megapixels * 1_000_000
+        if h * w <= limit:
+            return (image,)
+        s = math.sqrt(limit / (h * w))
+        nw, nh = max(1, round(w * s)), max(1, round(h * s))
+        return (comfy.utils.common_upscale(image.movedim(-1, 1), nw, nh, "lanczos", "disabled").movedim(1, -1),)

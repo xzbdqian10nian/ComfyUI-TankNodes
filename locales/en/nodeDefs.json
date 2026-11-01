@@ -708,5 +708,24 @@
         "name": "system prompt"
       }
     }
+  },
+  "TankOptionalImageDownscale": {
+    "display_name": "Optional Image Downscale · Tank",
+    "description": "Shrinks a picture to at most N megapixels (never enlarges); outputs nothing when no picture is connected, so optional reference inputs downstream are simply skipped.",
+    "inputs": {
+      "max_megapixels": {
+        "name": "max megapixels",
+        "tooltip": "Pictures larger than this are shrunk (lanczos); smaller ones pass through. Default 1.2."
+      },
+      "image": {
+        "name": "image",
+        "tooltip": "Optional. Empty or bypassed = no output."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "image"
+      }
+    }
   }
 }
