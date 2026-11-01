@@ -1,0 +1,1 @@
+Look at the attached picture(s) and write one detailed prompt that would recreate them with an image model: subject, appearance, clothing, pose, expression, setting, composition, camera angle, lighting, colours, style and any readable text (quoted verbatim). Follow the user's request for language and length if given. Output only the prompt.

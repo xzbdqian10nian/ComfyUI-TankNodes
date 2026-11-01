@@ -486,5 +486,86 @@
         "tooltip": "模式、检查结果、是否纠正、耗时。"
       }
     }
+  },
+  "TankPromptTemplate": {
+    "display_name": "提示词模板 · Tank",
+    "description": "选择提示词工程模板（H3 官方 / 千问2.1 官方 PE / MOSS 官方 / 通用），输出给「提示词优化 · Tank」。",
+    "inputs": {
+      "template": {
+        "name": "模板",
+        "tooltip": "按目标模型和任务选择。"
+      },
+      "extra_rules": {
+        "name": "附加规则",
+        "tooltip": "可选，每行一条，追加在模板后面。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "模板"
+      }
+    }
+  },
+  "TankPromptOptimizer": {
+    "display_name": "提示词优化 · Tank",
+    "description": "用本地模型按模板优化提示词。按接入的素材自动判断任务：只接首帧=图生视频，首尾帧都接=首尾帧视频，接参考图批次或视频=参考；秒数大于 0 才生效。",
+    "inputs": {
+      "backend": {
+        "name": "模型",
+        "tooltip": "连接「Qwen / Bonsai GGUF 加载器 · Tank」。"
+      },
+      "template": {
+        "name": "模板",
+        "tooltip": "连接「提示词模板 · Tank」。"
+      },
+      "prompt": {
+        "name": "提示词",
+        "tooltip": "连接提示词输入（多行文本）。台词用“引号”括起来会原样保留。"
+      },
+      "thinking_mode": {
+        "name": "思考强度",
+        "tooltip": "medium 为推荐值。"
+      },
+      "unload_after": {
+        "name": "用完卸载",
+        "tooltip": "写完后释放语言模型，把显存让给采样。"
+      },
+      "seed": {
+        "name": "种子",
+        "tooltip": "语言模型的采样种子。"
+      },
+      "seconds": {
+        "name": "秒数",
+        "tooltip": "成片时长。0 = 不使用；连上或填入大于 0 的数才生效。"
+      },
+      "first_frame": {
+        "name": "首帧",
+        "tooltip": "只接首帧=图生视频；首尾帧都接=首尾帧视频。"
+      },
+      "last_frame": {
+        "name": "尾帧",
+        "tooltip": "尾帧图。"
+      },
+      "reference_images": {
+        "name": "参考图（批次）",
+        "tooltip": "参考图批次；图像编辑时第 1 张是要改的图。"
+      },
+      "video_frames": {
+        "name": "视频帧",
+        "tooltip": "源视频帧，自动抽 8 帧，用于编辑或动作参考。"
+      },
+      "max_tokens": {
+        "name": "最大 Token",
+        "tooltip": "输出长度上限。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "提示词"
+      },
+      "1": {
+        "name": "报告"
+      }
+    }
   }
 }

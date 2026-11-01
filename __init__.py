@@ -4,6 +4,7 @@ from .api_nodes import VisionAPIDirect, VisionAPIEnv
 from .local_nodes import Qwen38VLLoader, VisionChat, VisionUnload
 from .text_nodes import TankTextSplit
 from .h3_optimizer import TankH3PromptOptimizer
+from .prompt_nodes import TankPromptOptimizer, TankPromptTemplate
 
 # These are persisted in existing workflows. Branding must not change them.
 NODE_CLASS_MAPPINGS = {
@@ -14,6 +15,8 @@ NODE_CLASS_MAPPINGS = {
     "VisionUnload": VisionUnload,
     "TankTextSplit": TankTextSplit,
     "TankH3PromptOptimizer": TankH3PromptOptimizer,
+    "TankPromptTemplate": TankPromptTemplate,
+    "TankPromptOptimizer": TankPromptOptimizer,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -24,6 +27,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "VisionUnload": "Unload Model · Tank",
     "TankTextSplit": "Text Split · Tank",
     "TankH3PromptOptimizer": "H3 Prompt Optimizer · Tank",
+    "TankPromptTemplate": "Prompt Template · Tank",
+    "TankPromptOptimizer": "Prompt Optimizer · Tank",
 }
 
 WEB_DIRECTORY = "./web"

@@ -486,5 +486,15 @@
         "tooltip": "Mode, checks, correction and timing."
       }
     }
+  },
+  "TankPromptTemplate": {
+    "display_name": "Prompt Template · Tank",
+    "description": "Prompt-engineering template for Prompt Optimizer · Tank.",
+    "outputs": {}
+  },
+  "TankPromptOptimizer": {
+    "display_name": "Prompt Optimizer · Tank",
+    "description": "Optimizes a prompt with a local model following the template; task inferred from connected media.",
+    "outputs": {}
   }
 }

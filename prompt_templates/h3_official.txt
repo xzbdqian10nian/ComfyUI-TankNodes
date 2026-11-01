@@ -1,0 +1,2 @@
+[[tank:h3]]
+MiniMax H3 official prompt format. The H3 engine writes the prompt by the official guide (T2VA / I2VA / FL2VA / L2VA / Ref2VA picked from the connected media) and checks the format.

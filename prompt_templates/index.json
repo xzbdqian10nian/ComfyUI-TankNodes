@@ -1,0 +1,30 @@
+[
+ {
+  "label": "H3 视频 · 官方格式（自动判断文生/图生/首尾帧/参考）",
+  "file": "h3_official.txt"
+ },
+ {
+  "label": "千问2.1 文生图 · 官方 PE 规则",
+  "file": "qwen21_t2i_official_pe.txt"
+ },
+ {
+  "label": "千问2.1 图像编辑 · 官方 PE 规则",
+  "file": "qwen21_edit_official_pe.txt"
+ },
+ {
+  "label": "MOSS 文生图 · 官方增强规则",
+  "file": "moss_t2i_official.txt"
+ },
+ {
+  "label": "通用 · 文生图扩写",
+  "file": "generic_t2i.txt"
+ },
+ {
+  "label": "通用 · 图像编辑指令扩写",
+  "file": "generic_edit.txt"
+ },
+ {
+  "label": "通用 · 看图反推提示词",
+  "file": "caption.txt"
+ }
+]
