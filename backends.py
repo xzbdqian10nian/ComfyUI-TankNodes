@@ -652,8 +652,11 @@ class OpenAICompatibleBackend:
         except Exception as exc:
             raise BackendError(f"OpenAI-compatible API request failed: {exc}") from exc
         finally:
-            await client.close()
+            # Drop the reference before awaiting close(): the non-stream path cancels
+            # this task as soon as its single result arrives, and a cancellation that
+            # lands inside close() must not leave a closed client cached for reuse.
             self.client = None
+            await client.close()
 
     async def _complete_with_aiohttp(self, request: dict[str, Any], extra_body: dict[str, Any]):
         """Use ComfyUI's async HTTP dependency when the OpenAI SDK is absent."""

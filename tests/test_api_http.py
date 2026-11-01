@@ -79,3 +79,30 @@ def test_key_source_info(module, monkeypatch):
     backend = backends.OpenAICompatibleBackend(base_url="http://localhost/v1", model="test", api_key="", api_key_env="TANK_TEST_API_KEY", timeout=1)
     assert "key_source=TANK_TEST_API_KEY" in backend.info()
     assert "synthetic-key" not in backend.info()
+
+
+def test_back_to_back_non_stream_requests_do_not_reuse_a_closed_client(module, api_server, monkeypatch):
+    # Regression: the non-stream path cancels the worker task as soon as the single
+    # result arrives. If that cancellation lands while the finally block is still
+    # awaiting client.close(), the backend used to keep a reference to the closed
+    # client and the next request failed with "Cannot send a request, as the client
+    # has been closed". Make close() slow so the cancellation reliably lands there.
+    import asyncio
+    import openai
+
+    original_close = openai.AsyncOpenAI.close
+
+    async def slow_close(self):
+        await original_close(self)
+        await asyncio.sleep(0.3)
+
+    monkeypatch.setattr(openai.AsyncOpenAI, "close", slow_close)
+    base_url, requests = api_server
+    backends = module("backends")
+    chat = module("chat")
+    api = backends.OpenAICompatibleBackend(base_url, "synthetic-key", "", "test-model", 30)
+    for _ in range(3):
+        result = api.complete(messages=[{"role": "user", "content": "hi"}], max_tokens=16, stream=False)
+        message, _usage = chat._extract_completion(result)
+        assert chat._split_message(message)[0] == "test answer"
+    assert len(requests) == 3
