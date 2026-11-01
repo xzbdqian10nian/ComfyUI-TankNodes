@@ -138,12 +138,24 @@ class TankPromptOptimizer:
         secs = float(seconds or 0.0)
         started = time.perf_counter()
         try:
-            if tpl.lstrip().startswith(H3_MARKER):
-                prompt_out, report = self._h3(backend, request, secs, first_frame, last_frame, reference_images,
-                                              video_frames, thinking_mode, int(max_tokens), int(seed), video_role)
-            else:
-                prompt_out, report = self._generic(backend, tpl, request, secs, first_frame, last_frame, reference_images,
-                                                   video_frames, thinking_mode, int(max_tokens), int(seed))
+            # If the model spends the whole budget thinking, retry with less thinking instead of failing the run.
+            ladder = [thinking_mode] + [m for m in ("low", "off") if m in REASONING_CHOICES and m != thinking_mode]
+            last_error = None
+            for attempt, mode in enumerate(ladder):
+                try:
+                    if tpl.lstrip().startswith(H3_MARKER):
+                        prompt_out, report = self._h3(backend, request, secs, first_frame, last_frame, reference_images,
+                                                      video_frames, mode, int(max_tokens), int(seed), video_role)
+                    else:
+                        prompt_out, report = self._generic(backend, tpl, request, secs, first_frame, last_frame,
+                                                           reference_images, video_frames, mode, int(max_tokens), int(seed))
+                    if attempt:
+                        report += "\n" + f"retried with thinking={mode} (first attempt: {str(last_error)[:120]})"
+                    break
+                except Exception as error:  # budget exhausted / empty answer -> try the next, cheaper mode
+                    last_error = error
+                    if attempt == len(ladder) - 1 or not re.search(r"budget|final answer|empty", str(error), re.I):
+                        raise
         finally:
             if unload_after and callable(getattr(backend, "unload", None)):
                 backend.unload()
