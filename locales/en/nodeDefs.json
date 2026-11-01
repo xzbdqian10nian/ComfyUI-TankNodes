@@ -495,6 +495,12 @@
   "TankPromptOptimizer": {
     "display_name": "Prompt Optimizer · Tank",
     "description": "Optimizes a prompt with a local model following the template; task inferred from connected media.",
-    "outputs": {}
+    "outputs": {},
+    "inputs": {
+      "video_role": {
+        "name": "video role",
+        "tooltip": "auto: edit source without reference pictures, motion reference with them."
+      }
+    }
   }
 }

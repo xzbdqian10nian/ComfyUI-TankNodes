@@ -116,6 +116,8 @@ class TankPromptOptimizer:
                 "reference_images": ("IMAGE", {"tooltip": "Reference pictures as one IMAGE batch -> reference task. For image "
                                                          "editing, picture 1 is the image being edited."}),
                 "video_frames": ("IMAGE", {"tooltip": "Frames of a source video (sampled to 8) for editing / motion reference."}),
+                "video_role": (["auto", "edit source", "motion reference"], {"default": "auto",
+                               "tooltip": "auto: editing without reference pictures, motion reference with them."}),
                 "max_tokens": ("INT", {"default": 6000, "min": 512, "max": 24000}),
             },
         }
@@ -128,7 +130,7 @@ class TankPromptOptimizer:
                    "the connected media; seconds is used only when > 0.")
 
     def run(self, backend, template, prompt, thinking_mode, unload_after, seed, seconds=0.0, first_frame=None,
-            last_frame=None, reference_images=None, video_frames=None, max_tokens=6000):
+            last_frame=None, reference_images=None, video_frames=None, max_tokens=6000, video_role="auto"):
         if backend is None or not callable(getattr(backend, "complete", None)):
             raise ValueError("Connect Qwen / Bonsai GGUF Loader · Tank to backend.")
         request = str(prompt or "").strip()
@@ -138,7 +140,7 @@ class TankPromptOptimizer:
         try:
             if tpl.lstrip().startswith(H3_MARKER):
                 prompt_out, report = self._h3(backend, request, secs, first_frame, last_frame, reference_images,
-                                              video_frames, thinking_mode, int(max_tokens), int(seed))
+                                              video_frames, thinking_mode, int(max_tokens), int(seed), video_role)
             else:
                 prompt_out, report = self._generic(backend, tpl, request, secs, first_frame, last_frame, reference_images,
                                                    video_frames, thinking_mode, int(max_tokens), int(seed))
@@ -152,7 +154,7 @@ class TankPromptOptimizer:
         return {"ui": {"text": (prompt_out + "\n\n---\n" + report,)}, "result": (prompt_out, report)}
 
     # -------------------------------------------------------------- H3 official format
-    def _h3(self, backend, request, secs, first, last, refs, video, thinking, max_tokens, seed):
+    def _h3(self, backend, request, secs, first, last, refs, video, thinking, max_tokens, seed, video_role="auto"):
         assets: list[Asset] = []
         for role, batch in (("first_frame", first), ("last_frame", last)):
             for urls in _frames_to_urls(batch)[:1]:
@@ -160,7 +162,9 @@ class TankPromptOptimizer:
         for urls in _frames_to_urls(refs):
             assets.append(Asset("picture", "reference", "", urls))
         if video is not None:
-            assets.append(Asset("video", "motion" if refs is not None else "editing", "", [u[0] for u in _frames_to_urls(video, 8)]))
+            role = {"edit source": "editing", "motion reference": "motion"}.get(video_role,
+                                                                              "motion" if refs is not None else "editing")
+            assets.append(Asset("video", role, "", [u[0] for u in _frames_to_urls(video, 8)]))
         duration = secs if secs > 0 else 5.0
         result = optimize(backend, Job(request, duration, assets, "auto"), thinking_mode=thinking, max_tokens=max_tokens,
                           seed=seed, correction=True)

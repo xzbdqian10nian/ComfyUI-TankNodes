@@ -557,6 +557,10 @@
       "max_tokens": {
         "name": "最大 Token",
         "tooltip": "输出长度上限。"
+      },
+      "video_role": {
+        "name": "视频用途",
+        "tooltip": "自动：没接参考图=编辑源视频，接了参考图=动作参考。视频编辑请选「edit source」。"
       }
     },
     "outputs": {
