@@ -502,5 +502,9 @@
         "tooltip": "auto: edit source without reference pictures, motion reference with them."
       }
     }
+  },
+  "TankImageBatch": {
+    "display_name": "Image Batch (optional inputs) · Tank",
+    "description": "Batches optional pictures; skips empty inputs."
   }
 }

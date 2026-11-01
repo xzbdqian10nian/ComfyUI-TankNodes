@@ -207,3 +207,37 @@ class TankPromptOptimizer:
         report = "\n".join([f"template=generic task={task}", f"pictures={n}",
                             f"seconds={'%.2f' % secs if secs > 0 else 'not used'}"])
         return out, report
+
+
+class TankImageBatch:
+    """Batch up to 9 optional pictures for Prompt Optimizer · Tank. Missing / bypassed inputs are skipped; with no
+    picture at all the output is None (downstream optional inputs just see nothing). Sizes are matched to the first."""
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {}, "optional": {f"image{i}": ("IMAGE",) for i in range(1, 10)}}
+
+    RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("images",)
+    FUNCTION = "run"
+    CATEGORY = "TankNodes/Prompt"
+    DESCRIPTION = "Batches optional pictures (skips empty inputs, outputs nothing when none are connected)."
+
+    def run(self, **kwargs):
+        import torch
+        import comfy.utils
+        frames = []
+        for i in range(1, 10):
+            img = kwargs.get(f"image{i}")
+            if img is None:
+                continue
+            frames.extend(img[j:j + 1] for j in range(img.shape[0]))
+        if not frames:
+            return (None,)
+        h, w = frames[0].shape[1], frames[0].shape[2]
+        out = []
+        for f in frames:
+            if f.shape[1] != h or f.shape[2] != w:
+                f = comfy.utils.common_upscale(f.movedim(-1, 1), w, h, "lanczos", "center").movedim(1, -1)
+            out.append(f)
+        return (torch.cat(out, dim=0),)
