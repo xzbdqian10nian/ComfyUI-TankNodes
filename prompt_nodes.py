@@ -105,7 +105,11 @@ def _register_template_routes() -> None:
 
     @routes.post("/tank/prompt_templates")
     async def _save(request):
-        body = await request.json()
+        try:
+            body = await request.json()
+            assert isinstance(body, dict)
+        except Exception:
+            return web.json_response({"error": "请求格式不对（需要 JSON）。"}, status=400)
         label = str(body.get("label") or "").strip()
         text = str(body.get("text") or "")
         old = str(body.get("old_label") or "").strip()
@@ -123,7 +127,11 @@ def _register_template_routes() -> None:
 
     @routes.post("/tank/prompt_templates/delete")
     async def _delete(request):
-        body = await request.json()
+        try:
+            body = await request.json()
+            assert isinstance(body, dict)
+        except Exception:
+            return web.json_response({"error": "请求格式不对（需要 JSON）。"}, status=400)
         label = str(body.get("label") or "").strip()
         items = _user_templates()
         if label not in {t["label"] for t in items}:
