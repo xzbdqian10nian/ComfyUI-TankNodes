@@ -6,10 +6,10 @@ import { api } from "../../scripts/api.js";
 const T = {
   zh: { button: "管理模板（编辑 / 复制 / 新增）", title: "提示词模板", name: "模板名称", builtin: "内置模板（只读，可复制后修改）",
         mine: "我的模板", save: "保存", copy: "复制为新模板", add: "新建空白模板", del: "删除", close: "关闭", use: "用这个模板",
-        copySuffix: "（副本）", newName: "我的新模板", confirmDel: "确定删除这个模板？", saved: "已保存", needName: "请填写模板名称" },
+        copySuffix: "（副本）", newName: "我的新模板", confirmDel: "确定删除这个模板？", saved: "已保存", needName: "请填写模板名称", saving: "保存中…" },
   en: { button: "Manage templates (edit / copy / add)", title: "Prompt templates", name: "Template name", builtin: "Built-in (read-only, copy to edit)",
         mine: "My template", save: "Save", copy: "Copy as new", add: "New blank", del: "Delete", close: "Close", use: "Use this template",
-        copySuffix: " (copy)", newName: "My new template", confirmDel: "Delete this template?", saved: "Saved", needName: "Please enter a name" },
+        copySuffix: " (copy)", newName: "My new template", confirmDel: "Delete this template?", saved: "Saved", needName: "Please enter a name", saving: "Saving…" },
 };
 function L() {
   let loc = "zh";
@@ -74,11 +74,13 @@ async function openManager(node) {
   });
   const saveBtn = btn(t.save, async () => {
     const label = nameIn.value.trim(); if (!label) { msg.style.color = "#e88"; msg.textContent = t.needName; return; }
+    msg.style.color = "#aab"; msg.textContent = t.saving; saveBtn.disabled = true;
     try {
       templates = await post("/tank/prompt_templates", { label, text: text.value, old_label: (!editingNew && sel && !sel.builtin) ? sel.label : "" });
       sel = templates.find(x => x.label === label); editingNew = false; refreshNodes(templates, node, label);
       msg.style.color = "#9c9"; msg.textContent = t.saved; paint();
     } catch (e) { msg.style.color = "#e88"; msg.textContent = e.message; }
+    finally { saveBtn.disabled = false; }
   }, true);
 
   function paint() {
