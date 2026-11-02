@@ -12,6 +12,14 @@
   "file": "qwen21_edit_official_pe.txt"
  },
  {
+  "label": "FLUX3 Klein 文生图 · 官方扩写规则",
+  "file": "flux3_t2i_official_upsampler.txt"
+ },
+ {
+  "label": "FLUX3 Klein 图像编辑 · 官方扩写规则",
+  "file": "flux3_edit_official_upsampler.txt"
+ },
+ {
   "label": "MOSS 文生图 · 官方增强规则",
   "file": "moss_t2i_official.txt"
  },

@@ -489,7 +489,7 @@
   },
   "TankPromptTemplate": {
     "display_name": "提示词模板 · Tank",
-    "description": "选择提示词工程模板（H3 官方 / Qwen2.1 官方 PE / MOSS 官方 / 通用），输出给「提示词优化 · Tank」。",
+    "description": "选择提示词工程模板（H3 官方 / Qwen2.1 官方 PE / MOSS 官方 / FLUX3 官方扩写 / 通用），输出给「提示词优化 · Tank」。",
     "inputs": {
       "template": {
         "name": "模板",
@@ -725,6 +725,25 @@
     "outputs": {
       "0": {
         "name": "图像"
+      }
+    }
+  },
+  "TankFlux3PromptEngineering": {
+    "display_name": "FLUX3 Klein 提示词工程 · Tank",
+    "description": "输出 FLUX 3 Image Klein 官方提示词扩写（upsampler）的系统提示词，接到「本地多模态对话 · Tank」的系统提示上；用户提示词和参考图接到对话节点。",
+    "inputs": {
+      "task": {
+        "name": "任务",
+        "tooltip": "文生图（text-to-image）或图像编辑（image edit），对应官方两套扩写规则。"
+      },
+      "extra_rules": {
+        "name": "附加规则",
+        "tooltip": "可选，追加在官方规则后面。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "系统提示词"
       }
     }
   }

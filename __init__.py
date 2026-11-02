@@ -4,7 +4,7 @@ from .api_nodes import VisionAPIDirect, VisionAPIEnv
 from .local_nodes import Qwen38VLLoader, VisionChat, VisionUnload
 from .text_nodes import TankTextSplit
 from .h3_optimizer import TankH3PromptOptimizer
-from .prompt_nodes import (TankImageBatch, TankMossPromptEngineering, TankOptionalImageDownscale, TankPromptOptimizer,
+from .prompt_nodes import (TankFlux3PromptEngineering, TankImageBatch, TankMossPromptEngineering, TankOptionalImageDownscale, TankPromptOptimizer,
                            TankPromptTemplate,
                            TankQwen21PromptEngineering)
 
@@ -22,6 +22,7 @@ NODE_CLASS_MAPPINGS = {
     "TankImageBatch": TankImageBatch,
     "TankQwen21PromptEngineering": TankQwen21PromptEngineering,
     "TankMossPromptEngineering": TankMossPromptEngineering,
+    "TankFlux3PromptEngineering": TankFlux3PromptEngineering,
     "TankOptionalImageDownscale": TankOptionalImageDownscale,
 }
 
@@ -38,6 +39,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "TankImageBatch": "Image Batch (optional inputs) · Tank",
     "TankQwen21PromptEngineering": "Qwen-Image 2.1 Prompt Engineering · Tank",
     "TankMossPromptEngineering": "MOSS-Image Prompt Engineering · Tank",
+    "TankFlux3PromptEngineering": "FLUX 3 Klein Prompt Engineering · Tank",
     "TankOptionalImageDownscale": "Optional Image Downscale · Tank",
 }
 

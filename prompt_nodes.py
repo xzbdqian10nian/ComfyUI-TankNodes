@@ -299,6 +299,32 @@ class TankMossPromptEngineering:
         return (text + ("\n\nAdditional rules:\n" + extra if extra else ""),)
 
 
+class TankFlux3PromptEngineering:
+    """Official FLUX 3 Image Klein prompt-upsampler system prompt (text-to-image / image edit), for Local Multimodal Chat · Tank."""
+
+    FILES = {"text-to-image": "flux3_t2i_official_upsampler.txt", "image edit": "flux3_edit_official_upsampler.txt"}
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {"task": (list(cls.FILES), {"default": "text-to-image",
+                                                        "tooltip": "text-to-image or image edit: the two official upsampler prompts."})},
+                "optional": {"extra_rules": ("STRING", {"multiline": True, "default": "",
+                                                        "tooltip": "Optional house rules appended after the official text."})}}
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("system_prompt",)
+    FUNCTION = "run"
+    CATEGORY = "TankNodes/Prompt"
+    DESCRIPTION = ("Outputs the official FLUX 3 Image Klein prompt-upsampler instructions. Connect it to Local Multimodal Chat · Tank "
+                   "as the system prompt; the user prompt (and reference pictures for editing) go into the chat node.")
+
+    def run(self, task, extra_rules=""):
+        with open(os.path.join(_TEMPLATE_DIR, self.FILES[task]), encoding="utf-8") as handle:
+            text = handle.read().rstrip()
+        extra = str(extra_rules or "").strip()
+        return (text + ("\n\nAdditional rules:\n" + extra if extra else ""),)
+
+
 class TankImageBatch:
     """Batch up to 9 optional pictures for Prompt Optimizer · Tank. Missing / bypassed inputs are skipped; with no
     picture at all the output is None (downstream optional inputs just see nothing). Sizes are matched to the first."""

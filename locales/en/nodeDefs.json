@@ -727,5 +727,24 @@
         "name": "image"
       }
     }
+  },
+  "TankFlux3PromptEngineering": {
+    "display_name": "FLUX 3 Klein Prompt Engineering · Tank",
+    "description": "Official FLUX 3 Image Klein prompt-upsampler system prompt for Local Multimodal Chat · Tank.",
+    "inputs": {
+      "task": {
+        "name": "task",
+        "tooltip": "text-to-image or image edit: the two official upsampler prompts."
+      },
+      "extra_rules": {
+        "name": "extra rules",
+        "tooltip": "Optional, appended after the official text."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "system prompt"
+      }
+    }
   }
 }
