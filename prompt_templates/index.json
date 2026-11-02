@@ -5,11 +5,13 @@
  },
  {
   "label": "Qwen2.1 文生图 · 官方 PE 规则",
-  "file": "qwen21_t2i_official_pe.txt"
+  "file": "qwen21_t2i_official_pe.txt",
+  "append": "qwen21_plain"
  },
  {
   "label": "Qwen2.1 图像编辑 · 官方 PE 规则",
-  "file": "qwen21_edit_official_pe.txt"
+  "file": "qwen21_edit_official_pe.txt",
+  "append": "qwen21_plain"
  },
  {
   "label": "FLUX3 Klein 文生图 · 官方扩写规则",

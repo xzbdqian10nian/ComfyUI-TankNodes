@@ -710,21 +710,39 @@
     }
   },
   "TankOptionalImageDownscale": {
-    "display_name": "Optional Image Downscale · Tank",
-    "description": "Shrinks a picture to at most N megapixels (never enlarges); outputs nothing when no picture is connected, so optional reference inputs downstream are simply skipped.",
+    "display_name": "Reference Image Resize (optional input) · Tank",
+    "description": "Resizes a picture to about N megapixels (shrink only by default); outputs nothing when no picture is connected, so optional reference inputs downstream are simply skipped.",
     "inputs": {
       "max_megapixels": {
         "name": "max megapixels",
-        "tooltip": "Pictures larger than this are shrunk (lanczos); smaller ones pass through. Default 1.2."
+        "tooltip": "Target size; larger pictures are shrunk to it. Default 1.2."
       },
       "image": {
         "name": "image",
         "tooltip": "Optional. Empty or bypassed = no output."
+      },
+      "upscale_method": {
+        "name": "method",
+        "tooltip": "lanczos is sharpest (default); area suits big reductions; nearest-exact does not interpolate."
+      },
+      "multiple_of": {
+        "name": "multiple of",
+        "tooltip": "Snap width/height to a multiple of this (e.g. 16, 32); 0 keeps the exact size."
+      },
+      "allow_upscale": {
+        "name": "allow upscale",
+        "tooltip": "Also enlarge smaller pictures to the target size; default shrink only."
       }
     },
     "outputs": {
       "0": {
         "name": "image"
+      },
+      "1": {
+        "name": "width"
+      },
+      "2": {
+        "name": "height"
       }
     }
   },

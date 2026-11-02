@@ -8,6 +8,10 @@ from .prompt_nodes import (TankFlux3PromptEngineering, TankImageBatch, TankMossP
                            TankPromptTemplate,
                            TankQwen21PromptEngineering)
 
+from .prompt_nodes import _register_template_routes
+
+_register_template_routes()
+
 # These are persisted in existing workflows. Branding must not change them.
 NODE_CLASS_MAPPINGS = {
     "Qwen38VLLoader": Qwen38VLLoader,
@@ -40,7 +44,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "TankQwen21PromptEngineering": "Qwen-Image 2.1 Prompt Engineering · Tank",
     "TankMossPromptEngineering": "MOSS-Image Prompt Engineering · Tank",
     "TankFlux3PromptEngineering": "FLUX 3 Klein Prompt Engineering · Tank",
-    "TankOptionalImageDownscale": "Optional Image Downscale · Tank",
+    "TankOptionalImageDownscale": "Reference Image Resize (optional input) · Tank",
 }
 
 WEB_DIRECTORY = "./web"

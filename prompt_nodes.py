@@ -27,12 +27,44 @@ _TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompt
 H3_MARKER = "[[tank:h3]]"
 
 
-def _load_index() -> list[dict[str, str]]:
+def _builtin_index() -> list[dict[str, Any]]:
     try:
         with open(os.path.join(_TEMPLATE_DIR, "index.json"), encoding="utf-8") as handle:
-            return json.load(handle)
+            return [dict(item, builtin=True) for item in json.load(handle)]
     except (OSError, ValueError):
-        return [{"label": "通用 · 提示词扩写", "file": ""}]
+        return [{"label": "通用 · 提示词扩写", "file": "", "builtin": True}]
+
+
+def _user_store_path() -> str:
+    try:
+        import folder_paths
+        base = folder_paths.get_user_directory()
+    except Exception:
+        base = os.path.join(os.path.dirname(os.path.abspath(__file__)), "user")
+    return os.path.join(base, "default", "tank_prompt_templates.json")
+
+
+def _user_templates() -> list[dict[str, Any]]:
+    try:
+        with open(_user_store_path(), encoding="utf-8") as handle:
+            data = json.load(handle)
+        return [dict(t, builtin=False) for t in data.get("templates", []) if t.get("label") and isinstance(t.get("text"), str)]
+    except (OSError, ValueError):
+        return []
+
+
+def _save_user_templates(items: list[dict[str, Any]]) -> None:
+    path = _user_store_path()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as handle:
+        json.dump({"templates": [{"label": t["label"], "text": t["text"], "updated": t.get("updated", int(time.time()))} for t in items]},
+                  handle, ensure_ascii=False, indent=1)
+    os.replace(tmp, path)
+
+
+def _load_index() -> list[dict[str, Any]]:
+    return _builtin_index() + _user_templates()
 
 
 def _template_text(label: str) -> str:
@@ -41,8 +73,63 @@ def _template_text(label: str) -> str:
             if not item.get("file"):
                 return item.get("text", "")
             with open(os.path.join(_TEMPLATE_DIR, item["file"]), encoding="utf-8") as handle:
-                return handle.read()
+                text = handle.read()
+            if item.get("append") == "qwen21_plain":
+                text = text.rstrip() + QWEN21_PLAIN_OUTPUT
+            return text
     raise ValueError(f"Unknown prompt template: {label}")
+
+
+def _register_template_routes() -> None:
+    """Template manager for the 提示词模板 node: list / save (create, copy, edit) / delete. Built-in templates are read-only."""
+    try:
+        from aiohttp import web
+        from server import PromptServer
+        routes = PromptServer.instance.routes
+    except Exception:
+        return
+
+    def listing():
+        out = []
+        for item in _load_index():
+            try:
+                text = _template_text(item["label"])
+            except Exception:
+                text = ""
+            out.append({"label": item["label"], "builtin": bool(item.get("builtin")), "text": text})
+        return out
+
+    @routes.get("/tank/prompt_templates")
+    async def _list(request):
+        return web.json_response({"templates": listing()})
+
+    @routes.post("/tank/prompt_templates")
+    async def _save(request):
+        body = await request.json()
+        label = str(body.get("label") or "").strip()
+        text = str(body.get("text") or "")
+        old = str(body.get("old_label") or "").strip()
+        if not label or not text.strip():
+            return web.json_response({"error": "模板名称和内容都不能为空。"}, status=400)
+        if len(label) > 80 or len(text) > 200000:
+            return web.json_response({"error": "模板名称或内容太长。"}, status=400)
+        if label in {i["label"] for i in _builtin_index()}:
+            return web.json_response({"error": "这是内置模板的名字，请换一个名称（内置模板不能被覆盖，可以复制后修改）。"}, status=400)
+        items = _user_templates()
+        items = [t for t in items if t["label"] not in (label, old)]
+        items.append({"label": label, "text": text, "updated": int(time.time())})
+        _save_user_templates(items)
+        return web.json_response({"saved": label, "templates": listing()})
+
+    @routes.post("/tank/prompt_templates/delete")
+    async def _delete(request):
+        body = await request.json()
+        label = str(body.get("label") or "").strip()
+        items = _user_templates()
+        if label not in {t["label"] for t in items}:
+            return web.json_response({"error": "只能删除自己新建的模板。"}, status=400)
+        _save_user_templates([t for t in items if t["label"] != label])
+        return web.json_response({"deleted": label, "templates": listing()})
 
 
 class TankPromptTemplate:
@@ -63,7 +150,9 @@ class TankPromptTemplate:
     RETURN_NAMES = ("template",)
     FUNCTION = "run"
     CATEGORY = "TankNodes/Prompt"
-    DESCRIPTION = "Outputs a prompt-engineering template (official H3 / Qwen-Image 2.1 PE / MOSS, or generic) for Prompt Optimizer · Tank."
+    DESCRIPTION = ("The single prompt-template node: official rules for H3 / Qwen-Image 2.1 / FLUX3 / MOSS, generic templates, and your own "
+                   "templates (use the 管理模板 button on the node to edit, copy, add or delete). Feeds Prompt Optimizer · Tank or the "
+                   "system prompt of Local Multimodal Chat · Tank.")
 
     def run(self, template, extra_rules=""):
         text = _template_text(template)
@@ -254,6 +343,7 @@ QWEN21_PLAIN_OUTPUT = (
 
 class TankQwen21PromptEngineering:
     """Official Qwen-Image 2.1 prompt-enhancer system prompt (T2I or edit), for Local Multimodal Chat · Tank."""
+    DEPRECATED = True  # use 提示词模板 · Tank instead; kept so old workflows and published cards still run
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -279,6 +369,7 @@ class TankQwen21PromptEngineering:
 
 class TankMossPromptEngineering:
     """Official MOSS-Image prompt-enhancer system prompt, for Local Multimodal Chat · Tank."""
+    DEPRECATED = True  # use 提示词模板 · Tank instead; kept so old workflows and published cards still run
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -301,6 +392,7 @@ class TankMossPromptEngineering:
 
 class TankFlux3PromptEngineering:
     """Official FLUX 3 Image Klein prompt-upsampler system prompt (text-to-image / image edit), for Local Multimodal Chat · Tank."""
+    DEPRECATED = True  # use 提示词模板 · Tank instead; kept so old workflows and published cards still run
 
     FILES = {"text-to-image": "flux3_t2i_official_upsampler.txt", "image edit": "flux3_edit_official_upsampler.txt"}
 
@@ -361,31 +453,41 @@ class TankImageBatch:
 
 
 class TankOptionalImageDownscale:
-    """Shrink a picture to at most `max_megapixels` (never enlarges). The picture is optional: with nothing connected
-    (or the loader bypassed / not uploaded) the output is None, so optional reference inputs downstream just see
-    nothing instead of failing."""
+    """Resize a picture to at most N megapixels (optionally also enlarge, snap to a multiple). The picture is optional: with nothing
+    connected (loader bypassed / not uploaded) the outputs are empty, so optional reference inputs downstream just see nothing."""
+
+    METHODS = ["lanczos", "bicubic", "area", "bilinear", "nearest-exact"]
 
     @classmethod
     def INPUT_TYPES(cls):
         return {"required": {"max_megapixels": ("FLOAT", {"default": 1.2, "min": 0.1, "max": 16.0, "step": 0.05,
-                                                          "tooltip": "Pictures larger than this are shrunk (lanczos), smaller ones pass through."})},
-                "optional": {"image": ("IMAGE", {"tooltip": "Optional picture; empty input = no output."})}}
+                                                          "tooltip": "Target size in megapixels. Larger pictures are shrunk to it."})},
+                "optional": {"image": ("IMAGE", {"tooltip": "Optional picture; empty input = no output."}),
+                             "upscale_method": (cls.METHODS, {"default": "lanczos", "tooltip": "Resampling filter."}),
+                             "multiple_of": ("INT", {"default": 0, "min": 0, "max": 128, "step": 8,
+                                                     "tooltip": "Snap width and height to a multiple of this (0 = keep the exact size)."}),
+                             "allow_upscale": ("BOOLEAN", {"default": False, "tooltip": "Also enlarge smaller pictures up to the target size."})}}
 
-    RETURN_TYPES = ("IMAGE",)
-    RETURN_NAMES = ("image",)
+    RETURN_TYPES = ("IMAGE", "INT", "INT")
+    RETURN_NAMES = ("image", "width", "height")
     FUNCTION = "run"
     CATEGORY = "TankNodes/Image"
-    DESCRIPTION = "Optional picture → shrunk to at most N megapixels; outputs nothing when no picture is connected."
+    DESCRIPTION = "Optional picture → resized to about N megapixels (shrink only by default); empty outputs when no picture is connected."
 
-    def run(self, max_megapixels, image=None):
+    def run(self, max_megapixels, image=None, upscale_method="lanczos", multiple_of=0, allow_upscale=False):
         import math
         import comfy.utils
         if image is None:
-            return (None,)
+            return (None, 0, 0)
         h, w = image.shape[1], image.shape[2]
         limit = max_megapixels * 1_000_000
-        if h * w <= limit:
-            return (image,)
-        s = math.sqrt(limit / (h * w))
-        nw, nh = max(1, round(w * s)), max(1, round(h * s))
-        return (comfy.utils.common_upscale(image.movedim(-1, 1), nw, nh, "lanczos", "disabled").movedim(1, -1),)
+        scale = math.sqrt(limit / (h * w))
+        if scale >= 1 and not allow_upscale:
+            scale = 1.0
+        nw, nh = max(1, round(w * scale)), max(1, round(h * scale))
+        if multiple_of:
+            nw, nh = max(multiple_of, nw // multiple_of * multiple_of), max(multiple_of, nh // multiple_of * multiple_of)
+        if (nw, nh) == (w, h):
+            return (image, w, h)
+        out = comfy.utils.common_upscale(image.movedim(-1, 1), nw, nh, upscale_method, "disabled").movedim(1, -1)
+        return (out, nw, nh)

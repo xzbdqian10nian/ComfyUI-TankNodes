@@ -489,11 +489,11 @@
   },
   "TankPromptTemplate": {
     "display_name": "提示词模板 · Tank",
-    "description": "选择提示词工程模板（H3 官方 / Qwen2.1 官方 PE / MOSS 官方 / FLUX3 官方扩写 / 通用），输出给「提示词优化 · Tank」。",
+    "description": "唯一的提示词模板节点：H3 / Qwen2.1 / FLUX3 / MOSS 官方规则、通用模板，以及你自己的模板。点节点上的「管理模板」可以编辑、复制、新增、删除；输出接「提示词优化 · Tank」或「本地多模态对话 · Tank」的系统提示。",
     "inputs": {
       "template": {
         "name": "模板",
-        "tooltip": "按目标模型和任务选择。H3 模板会走官方格式引擎并自动检查格式。"
+        "tooltip": "按目标模型和任务选择；★ 是你自己的模板。H3 模板会走官方格式引擎并自动检查格式。"
       },
       "extra_rules": {
         "name": "附加规则",
@@ -710,21 +710,39 @@
     }
   },
   "TankOptionalImageDownscale": {
-    "display_name": "可选图像缩小 · Tank",
-    "description": "图片超过设定像素就等比缩小（不会放大）；没接图或加载器被关掉时输出为空，后面的可选参考图输入直接当作没有，不报错。",
+    "display_name": "参考图缩放（可选输入）· Tank",
+    "description": "把图缩放到约 N 百万像素（默认只缩不放）；没接图或加载器被关掉时输出为空，后面的可选参考图输入直接当作没有，不报错。",
     "inputs": {
       "max_megapixels": {
-        "name": "最大像素（百万）",
-        "tooltip": "超过这个像素数就等比缩小（lanczos），小于它原样通过。默认 1.2 百万像素。"
+        "name": "目标像素（百万）",
+        "tooltip": "超过这个像素数就等比缩小到它；默认 1.2 百万像素。"
       },
       "image": {
         "name": "图像",
         "tooltip": "可选。没接或被关掉 = 不输出。"
+      },
+      "upscale_method": {
+        "name": "缩放算法",
+        "tooltip": "lanczos 最清晰（默认）；area 适合大幅缩小；nearest-exact 不插值。"
+      },
+      "multiple_of": {
+        "name": "尺寸对齐",
+        "tooltip": "把宽高对齐到这个数的倍数（如 16、32），0 = 保持精确尺寸。"
+      },
+      "allow_upscale": {
+        "name": "小图也放大",
+        "tooltip": "打开后，小于目标像素的图也会放大到目标像素；默认只缩不放。"
       }
     },
     "outputs": {
       "0": {
         "name": "图像"
+      },
+      "1": {
+        "name": "宽"
+      },
+      "2": {
+        "name": "高"
       }
     }
   },
