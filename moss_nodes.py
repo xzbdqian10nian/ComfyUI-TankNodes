@@ -38,6 +38,8 @@ def wrap_cjk(text: str, box_w: float, box_h: float) -> str:
     if len(t) <= 2:
         return t
     per = max(2, math.ceil(math.sqrt(len(t) * max(box_w, 1.0) / max(box_h, 1.0))))
+    if box_h > 2.5 * max(box_w, 1.0):
+        per = 1                                    # tall narrow balloon: one character per row (vertical lettering)
     rows, cur = [], ""
     for ch in t:
         if len(cur) >= per and ch not in _NO_LINE_START:
@@ -88,7 +90,29 @@ def parse_detections(text: str) -> list[dict]:
             data = data.get("items") or data.get("texts") or data.get("blocks") or [data]
         if isinstance(data, list):
             return [d for d in data if isinstance(d, dict)]
+    salvaged = _salvage_objects(s)
+    if salvaged:
+        return salvaged
     raise ValueError("Could not find a JSON list of text blocks in the model answer:\n" + s[:400])
+
+
+def _salvage_objects(s: str) -> list[dict]:
+    """Every complete ``{...}`` of a JSON array the model left unfinished (cut off at max_tokens or stuck repeating)."""
+    dec, out = json.JSONDecoder(), []
+    i = s.find("[") + 1
+    if i <= 0:
+        return out
+    while True:
+        j = s.find("{", i)
+        if j < 0:
+            break
+        try:
+            obj, i = dec.raw_decode(s, j)
+        except ValueError:
+            break
+        if isinstance(obj, dict):
+            out.append(obj)
+    return out
 
 
 def _box_of(d: dict):
@@ -164,9 +188,10 @@ SYSTEM_PROMPT = (
     "naturally and briefly into {lang}, as it would be lettered in a published translation, keeping the tone. "
     "Translate the meaning, never the sound: do not transliterate Japanese words syllable by syllable. Names: use the "
     "official {lang} form when you know the character; in Chinese write Japanese names with their kanji (まふゆ -> "
-    "真冬), never with phonetic characters. Honorifics (さん, くん, ちゃん) are dropped or rendered naturally - never as "
-    "Miss / 小姐 between classmates. Keep stutters and hesitations as stutters (ま、任せて -> 交、交给我吧 / L-leave it "
-    "to me; とっとっとっても -> 非、非、非常), and interjections as natural interjections (は？ -> 哈？ / Huh?). "
+    "真冬), never with phonetic characters. Honorifics: さん / くん between classmates or colleagues become the bare "
+    "name or 同学 / 前辈 in Chinese (never 小姐, 先生 or 酱; 酱 only for ちゃん); in English drop them. Keep stutters and hesitations as stutters (ま、任せて -> 交、交给我吧 / L-leave it "
+    "to me; とっとっとっても -> 非、非、非常), interjections as natural interjections (は？ -> 哈？ / Huh?) and sighs "
+    "as sighs (はぁ… -> 唉… / Sigh...). "
     "Answer with ONLY a JSON array, no prose: "
     '[{{"bbox_2d": [x1, y1, x2, y2], "ja": "original Japanese", "text": "translation"}}]'
 )
@@ -313,8 +338,11 @@ CHAR_SYSTEM = (
     "You are a manga panel analyst. The user gives a character sheet: one line per character, `name | how to recognise "
     "them in black-and-white art`. Look at the whole page and find EVERY appearance of these characters in EVERY panel "
     "(the same character usually appears in several panels). For each appearance return one box around that character "
-    "(head and the visible body, staying inside its panel) and which character it is. Use \"unknown\" for people who are "
-    "not on the sheet; skip tiny background people. Coordinates are relative 0 to 1000 [x1, y1, x2, y2], x to the right, "
+    "(head and the visible body, staying inside its panel) and which character it is. Decide who it is by hair tone "
+    "first (black / dark screentone, mid grey, or white / untoned), then hairstyle and face, then names written in "
+    "nearby speech balloons. Anyone who does not clearly match one sheet line - teachers, other classmates, family, "
+    "crowds - is \"unknown\": never force a sheet name onto them. A character normally appears at most once per "
+    "panel. Skip tiny background people and hands. Coordinates are relative 0 to 1000 [x1, y1, x2, y2], x to the right, "
     "y downwards, measured on this image. Answer with ONLY a JSON array, no prose: "
     '[{"bbox_2d": [x1, y1, x2, y2], "who": "name"}]'
 )

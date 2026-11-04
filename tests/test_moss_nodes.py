@@ -122,3 +122,8 @@ def test_colorize_layout_position_only_and_order():
     d = json.loads(m.build_colorize_layout(dets, sheet, 1000, 1400, 1024, add_bbox=False)[0])
     assert "bbox_format" not in d and all("bbox" not in i for i in d["items"])
     assert [i["caption"] for i in d["items"]] == ["red hair", "blue hair"]       # reading order: top row first
+
+
+def test_truncated_answer_salvaged():
+    ans = '[\n {"bbox_2d": [847, 0, 998, 275], "ja": "あ", "text": "啊"},\n {"bbox_2d": [1, 2, 3, 4], "ja": "い", "text": "咦"},\n {"bbox_2d": [5, 6'
+    assert [d["text"] for d in m.parse_detections(ans)] == ["啊", "咦"]
