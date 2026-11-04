@@ -80,7 +80,8 @@ def _text_of(d: dict) -> str:
 
 
 def build_layout(detections: list[dict], page_w: int, page_h: int, resolution: int, coord_mode: str = "auto",
-                 uppercase_english: bool = True, min_box: int = 8, language: str = "auto") -> tuple[str, list[dict]]:
+                 uppercase_english: bool = True, min_box: int = 8, language: str = "auto",
+                 merge: bool = True) -> tuple[str, list[dict]]:
     """Return (layout JSON, kept items with page-pixel boxes for the preview)."""
     boxes = [(d, _box_of(d), _text_of(d)) for d in detections]
     boxes = [(d, b, t) for d, b, t in boxes if b and t]
@@ -88,20 +89,28 @@ def build_layout(detections: list[dict], page_w: int, page_h: int, resolution: i
         top = max((max(b) for _, b, _ in boxes), default=0)
         coord_mode = "pixels" if top > 1000 else "0-1000"
     w, h = target_size(page_w, page_h, resolution)
-    items, kept = [], []
+    entries = []
     for d, (x0, y0, x1, y1), t in boxes:
         if coord_mode == "0-1000":
-            x0, x1 = x0 * page_w / 1000, x1 * page_w / 1000
-            y0, y1 = y0 * page_h / 1000, y1 * page_h / 1000
+            x0, x1 = (min(max(v, 0.0), 1000.0) * page_w / 1000 for v in (x0, x1))
+            y0, y1 = (min(max(v, 0.0), 1000.0) * page_h / 1000 for v in (y0, y1))
         x0, x1 = sorted((x0, x1))
         y0, y1 = sorted((y0, y1))
         if x1 - x0 < min_box or y1 - y0 < min_box:
             continue
+        entries.append({"box": [x0, y0, x1, y1], "text": t,
+                        "source": str(d.get("ja") or d.get("source") or d.get("original") or "")})
+    if merge:
+        entries = merge_columns(entries)
+    items, kept = [], []
+    for e in entries:
+        t = e["text"]
         if uppercase_english and not _HANGUL.search(t):
             t = t.upper()
+        x0, y0, x1, y1 = e["box"]
         canvas_box = [x0 * w / page_w, y0 * h / page_h, x1 * w / page_w, y1 * h / page_h]
         items.append({"label": "text", "caption": "text", "text": t, "bbox": centered_box(canvas_box, (w, h))})
-        kept.append({"text": t, "source": str(d.get("ja") or d.get("source") or d.get("original") or ""), "box": [x0, y0, x1, y1]})
+        kept.append({"text": t, "source": e["source"], "box": e["box"]})
     if language == "auto":
         language = "korean" if any(_HANGUL.search(i["text"]) for i in items) else "english"
     layout = {"summary": {"caption": LANGS[language][1]}, "items": items,
@@ -110,16 +119,54 @@ def build_layout(detections: list[dict], page_w: int, page_h: int, resolution: i
 
 
 SYSTEM_PROMPT = (
-    "You are a professional manga translator and letterer. You look at one manga page and list every block of "
-    "Japanese text a reader would read: speech balloons, thought balloons, narration / caption boxes and signs that "
-    "carry dialogue. Skip page numbers, watermarks, signatures, and sound effects drawn as artwork outside balloons. "
-    "Read vertical Japanese top-to-bottom, right-to-left. For each block give its bounding box covering the area inside "
-    "the balloon or box where the lettering sits (not the whole panel), as relative coordinates from 0 to 1000 "
-    "[x1, y1, x2, y2] with x to the right and y downwards. Translate naturally and briefly into {lang}, as it would be "
-    "lettered in a published translation; keep names, honorifics and tone; keep it short enough to fit the balloon. "
-    "Answer with ONLY a JSON array, no prose, no code fence: "
+    "You are a professional manga translator and letterer. Look at the manga page and find every speech balloon, "
+    "thought balloon and narration / caption box that contains Japanese text. Return ONE entry per balloon or box: "
+    "a balloon often holds several vertical columns - read all of them (top to bottom, columns right to left) and "
+    "translate them together as one line of dialogue. The bbox_2d covers the whole inside of that balloon or box "
+    "(where the lettering sits, not the whole panel), as relative coordinates from 0 to 1000 [x1, y1, x2, y2], "
+    "x to the right and y downwards, measured on this image. Skip page numbers, watermarks, signatures and sound "
+    "effects drawn as artwork outside balloons. Never invent text and never output empty entries. Translate "
+    "naturally and briefly into {lang}, as it would be lettered in a published translation; keep names and tone. "
+    "Answer with ONLY a JSON array, no prose: "
     '[{{"bbox_2d": [x1, y1, x2, y2], "ja": "original Japanese", "text": "translation"}}]'
 )
+
+
+def _union(group):
+    return [min(e["box"][0] for e in group), min(e["box"][1] for e in group),
+            max(e["box"][2] for e in group), max(e["box"][3] for e in group)]
+
+
+def merge_columns(entries: list[dict]) -> list[dict]:
+    """Merge side-by-side narrow vertical boxes of one balloon (a VL model sometimes returns one entry per column).
+    entries: {"box": [x0, y0, x1, y1] page px, "text": str, "source": str}. Text joins right-to-left."""
+    def tall(b):
+        return (b[3] - b[1]) > 1.5 * (b[2] - b[0])
+
+    def same_balloon(a, b):
+        if not (tall(a) and tall(b)):
+            return False
+        gap = max(a[0], b[0]) - min(a[2], b[2])
+        ov = min(a[3], b[3]) - max(a[1], b[1])
+        return gap <= 0.6 * min(a[2] - a[0], b[2] - b[0]) + 4 and ov >= 0.5 * min(a[3] - a[1], b[3] - b[1])
+
+    groups = [[e] for e in entries]
+    merged = True
+    while merged:
+        merged = False
+        for i in range(len(groups)):
+            for j in range(i + 1, len(groups)):
+                if same_balloon(_union(groups[i]), _union(groups[j])):
+                    groups[i] += groups.pop(j)
+                    merged = True
+                    break
+            if merged:
+                break
+    out = []
+    for g in groups:
+        g = sorted(g, key=lambda e: -e["box"][2])          # vertical Japanese: right column first
+        out.append({"box": _union(g), "text": " ".join(e["text"] for e in g), "source": "".join(e["source"] for e in g)})
+    return out
 
 
 class TankMangaTranslatePrompt:
@@ -160,6 +207,7 @@ class TankMossSwapTextLayout:
             "coord_mode": (["auto", "0-1000", "pixels"], {"default": "auto", "tooltip": "auto: boxes above 1000 are pixels, else relative 0-1000."}),
             "uppercase_english": ("BOOLEAN", {"default": True, "tooltip": "Manga lettering is usually upper case."}),
             "min_box": ("INT", {"default": 8, "min": 0, "max": 256, "tooltip": "Drop boxes thinner than this (page pixels)."}),
+            "merge_columns": ("BOOLEAN", {"default": True, "tooltip": "Merge side-by-side vertical column boxes of one balloon into one item."}),
         }}
 
     RETURN_TYPES = ("STRING", "IMAGE", "STRING")
@@ -168,14 +216,14 @@ class TankMossSwapTextLayout:
     CATEGORY = "TankNodes/MOSS"
     DESCRIPTION = "Turn a VL model's text-block boxes + translations into the layout-JSON prompt of the MOSS swap_text LoRA."
 
-    def convert(self, image, detections, resolution, coord_mode="auto", uppercase_english=True, min_box=8):
+    def convert(self, image, detections, resolution, coord_mode="auto", uppercase_english=True, min_box=8, merge_columns=True):
         import numpy as np
         import torch
         from PIL import Image, ImageDraw
 
         page = image[0]
         h, w = int(page.shape[0]), int(page.shape[1])
-        layout, kept = build_layout(parse_detections(detections), w, h, resolution, coord_mode, uppercase_english, min_box)
+        layout, kept = build_layout(parse_detections(detections), w, h, resolution, coord_mode, uppercase_english, min_box, merge=merge_columns)
         pil = Image.fromarray((page.cpu().numpy() * 255).clip(0, 255).astype(np.uint8)).convert("RGB")
         draw = ImageDraw.Draw(pil)
         for i, k in enumerate(kept, 1):

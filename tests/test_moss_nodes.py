@@ -44,3 +44,18 @@ def test_pixel_mode_and_tiny_boxes_dropped():
 def test_prompt_node():
     sys_p, p = m.TankMangaTranslatePrompt().build("korean", "光太郎 = 코타로")
     assert "Korean" in sys_p and "bbox_2d" in sys_p and "코타로" in p
+
+
+def test_columns_of_one_balloon_merge_right_to_left():
+    dets = [{"bbox_2d": [920, 857, 975, 959], "ja": "お願いします", "text": "Please..."},
+            {"bbox_2d": [855, 857, 905, 959], "ja": "どんな命令にも従うので", "text": "I'll follow any order."},
+            {"bbox_2d": [37, 857, 97, 959], "ja": "メイドとして", "text": "Hire me?"},
+            {"bbox_2d": [37, 959, 97, 999], "ja": "", "text": ""}]
+    layout, kept = m.build_layout(dets, 698, 988, 1024)
+    texts = [i["text"] for i in json.loads(layout)["items"]]
+    assert len(texts) == 2 and "PLEASE... I'LL FOLLOW ANY ORDER." in texts
+
+
+def test_wide_boxes_never_merge():
+    dets = [{"bbox_2d": [100, 100, 500, 160], "text": "a"}, {"bbox_2d": [100, 170, 500, 230], "text": "b"}]
+    assert len(json.loads(m.build_layout(dets, 1000, 1000, 1024)[0])["items"]) == 2
