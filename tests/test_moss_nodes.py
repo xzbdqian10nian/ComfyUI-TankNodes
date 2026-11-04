@@ -143,3 +143,9 @@ def test_chinese_fit_inside_balloon_one_size():
         assert it["text"].replace(chr(10), "") == d["text"]
     en, _ = m.build_layout([{"bbox_2d": [100, 100, 300, 400], "text": "Hello there"}], 1000, 1400, 1024, "0-1000")
     assert json.loads(en)["items"][0]["bbox"] == m.centered_box([100 * w / 1000, 140 * h / 1400 * 10, 300 * w / 1000, 560 * h / 1400], (w, h)) or True
+
+
+def test_chinese_fit_leaves_english_lines_alone():
+    dets = [{"bbox_2d": [100, 100, 300, 400], "text": "这下就能买喜欢的零食啦"}, {"bbox_2d": [600, 100, 950, 300], "text": "TRICK OR TREAT!!"}]
+    items = json.loads(m.build_layout(dets, 1000, 1400, 1024, "0-1000")[0])["items"]
+    assert "TRICK OR TREAT!!" in [i["text"] for i in items]

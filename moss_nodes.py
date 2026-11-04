@@ -151,8 +151,10 @@ def fit_chinese(entries: list[dict], page_w: float, page_h: float, inner=(0.72, 
     so Chinese came out too big, overflowing, with a different size in every balloon. Here each balloon gets the
     block its text needs inside the balloon's inner rectangle, broken into rows that maximise the glyph size, and the
     whole page shares one size (capped at 1.25x the median and 5.5% of the short side) so the lettering looks uniform."""
-    plans = []
+    plans, keep = [], []
     for e in entries:
+        if not _HAN.search(e["text"]):      # an English / SFX line on a Chinese page keeps the balloon box
+            keep.append(e); continue
         x0, y0, x1, y1 = e["box"]
         bw, bh = (x1 - x0) * inner[0], (y1 - y0) * inner[1]
         t = e["text"].replace(chr(10), "")
@@ -176,7 +178,7 @@ def fit_chinese(entries: list[dict], page_w: float, page_h: float, inner=(0.72, 
         bw, bh = max(len(r) for r in rows) * fs, len(rows) * fs * line
         out.append({**e, "text": chr(10).join(rows), "balloon": e["box"], "fitted": True,
                     "box": [cx - bw / 2, cy - bh / 2, cx + bw / 2, cy + bh / 2]})
-    return out
+    return out + keep
 
 
 def build_layout(detections: list[dict], page_w: int, page_h: int, resolution: int, coord_mode: str = "auto",
