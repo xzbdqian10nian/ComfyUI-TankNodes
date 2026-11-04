@@ -3,6 +3,7 @@
 from .api_nodes import VisionAPIDirect, VisionAPIEnv
 from .local_nodes import Qwen38VLLoader, VisionChat, VisionUnload
 from .text_nodes import TankTextSplit
+from .moss_nodes import TankMangaTranslatePrompt, TankMossSwapTextLayout
 from .h3_optimizer import TankH3PromptOptimizer
 from .prompt_nodes import (TankFlux3PromptEngineering, TankImageBatch, TankMossPromptEngineering, TankOptionalImageDownscale, TankPromptOptimizer,
                            TankPromptTemplate,
@@ -28,6 +29,8 @@ NODE_CLASS_MAPPINGS = {
     "TankMossPromptEngineering": TankMossPromptEngineering,
     "TankFlux3PromptEngineering": TankFlux3PromptEngineering,
     "TankOptionalImageDownscale": TankOptionalImageDownscale,
+    "TankMangaTranslatePrompt": TankMangaTranslatePrompt,
+    "TankMossSwapTextLayout": TankMossSwapTextLayout,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -45,6 +48,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "TankMossPromptEngineering": "MOSS-Image Prompt Engineering · Tank",
     "TankFlux3PromptEngineering": "FLUX 3 Klein Prompt Engineering · Tank",
     "TankOptionalImageDownscale": "Reference Image Resize (optional input) · Tank",
+    "TankMangaTranslatePrompt": "Manga Translate Prompt (VL) · Tank",
+    "TankMossSwapTextLayout": "MOSS Swap-Text Layout · Tank",
 }
 
 WEB_DIRECTORY = "./web"
