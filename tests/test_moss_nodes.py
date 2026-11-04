@@ -79,6 +79,19 @@ def test_repeats_and_contained_entries():
 def test_chinese_detected_not_uppercased():
     layout, _ = m.build_layout([{"bbox_2d": [10, 10, 300, 300], "text": "穿女仆装的少女来访了。"}], 800, 1200, 1024)
     d = json.loads(layout)
-    assert d["summary"]["caption"] == "comic, chinese text" and d["items"][0]["text"] == "穿女仆装的少女来访了。"
+    assert d["summary"]["caption"] == "comic, chinese text" and d["items"][0]["text"].replace("
+", "") == "穿女仆装的少女来访了。"
     sys_p, _ = m.TankMangaTranslatePrompt().build("chinese")
     assert "Simplified Chinese" in sys_p
+
+
+def test_chinese_prewrap_and_kinsoku():
+    out = m.wrap_cjk("拜托您了……无论什么命令我都会听从", 100, 150)
+    rows = out.split("\n")
+    assert "".join(rows) == "拜托您了……无论什么命令我都会听从"
+    assert all(r[0] not in m._NO_LINE_START for r in rows)
+    layout, _ = m.build_layout([{"bbox_2d": [815, 57, 958, 295], "text": "一位身着女仆装束的少女前来拜访"}], 698, 988, 1024)
+    assert json.loads(layout)["items"][0]["text"].replace("\n", "") == "一位身着女仆装束的少女前来拜访"
+    assert "\n" in json.loads(layout)["items"][0]["text"]
+    en, _ = m.build_layout([{"bbox_2d": [10, 10, 300, 300], "text": "Hello there"}], 800, 1200, 1024)
+    assert "\n" not in json.loads(en)["items"][0]["text"]

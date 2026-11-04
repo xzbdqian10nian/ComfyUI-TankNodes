@@ -29,6 +29,25 @@ def detect_language(texts) -> str:
     return "english"
 
 
+_NO_LINE_START = set("，。！？、；：…）」』】》〉,.!?;:)]}～~·—")
+
+
+def wrap_cjk(text: str, box_w: float, box_h: float) -> str:
+    """Break a Chinese line into rows fitting the box's shape; punctuation never opens a row."""
+    t = text.replace("\n", "")
+    if len(t) <= 2:
+        return t
+    per = max(2, math.ceil(math.sqrt(len(t) * max(box_w, 1.0) / max(box_h, 1.0))))
+    rows, cur = [], ""
+    for ch in t:
+        if len(cur) >= per and ch not in _NO_LINE_START:
+            rows.append(cur); cur = ""
+        cur += ch
+    if cur:
+        rows.append(cur)
+    return "\n".join(rows)
+
+
 def target_size(width: int, height: int, resolution: int) -> tuple[int, int]:
     """Same rule as ComfyUI-MOSS-Toolkit ``nodes.target_size``."""
     cap = resolution * resolution
@@ -93,7 +112,7 @@ def _text_of(d: dict) -> str:
 
 def build_layout(detections: list[dict], page_w: int, page_h: int, resolution: int, coord_mode: str = "auto",
                  uppercase_english: bool = True, min_box: int = 8, language: str = "auto",
-                 merge: bool = True) -> tuple[str, list[dict]]:
+                 merge: bool = True, cjk_wrap: bool = True) -> tuple[str, list[dict]]:
     """Return (layout JSON, kept items with page-pixel boxes for the preview)."""
     boxes = [(d, _box_of(d), _text_of(d)) for d in detections]
     boxes = [(d, b, t) for d, b, t in boxes if b and t]
@@ -121,6 +140,8 @@ def build_layout(detections: list[dict], page_w: int, page_h: int, resolution: i
         if uppercase_english and not _HANGUL.search(t) and not _HAN.search(t):
             t = t.upper()
         x0, y0, x1, y1 = e["box"]
+        if cjk_wrap and _HAN.search(t) and not _HANGUL.search(t) and not _KANA.search(t):
+            t = wrap_cjk(t, x1 - x0, y1 - y0)
         canvas_box = [x0 * w / page_w, y0 * h / page_h, x1 * w / page_w, y1 * h / page_h]
         items.append({"label": "text", "caption": "text", "text": t, "bbox": centered_box(canvas_box, (w, h))})
         kept.append({"text": t, "source": e["source"], "box": e["box"]})
@@ -254,6 +275,7 @@ class TankMossSwapTextLayout:
             "uppercase_english": ("BOOLEAN", {"default": True, "tooltip": "Manga lettering is usually upper case."}),
             "min_box": ("INT", {"default": 8, "min": 0, "max": 256, "tooltip": "Drop boxes thinner than this (page pixels)."}),
             "merge_columns": ("BOOLEAN", {"default": True, "tooltip": "Merge side-by-side vertical column boxes of one balloon into one item."}),
+            "chinese_line_breaks": ("BOOLEAN", {"default": True, "tooltip": "Pre-break Chinese lines to the balloon's shape (the LoRA drops or doubles characters where it breaks Chinese lines itself)."}),
         }}
 
     RETURN_TYPES = ("STRING", "IMAGE", "STRING")
@@ -262,14 +284,14 @@ class TankMossSwapTextLayout:
     CATEGORY = "TankNodes/MOSS"
     DESCRIPTION = "Turn a VL model's text-block boxes + translations into the layout-JSON prompt of the MOSS swap_text LoRA."
 
-    def convert(self, image, detections, resolution, coord_mode="auto", uppercase_english=True, min_box=8, merge_columns=True):
+    def convert(self, image, detections, resolution, coord_mode="auto", uppercase_english=True, min_box=8, merge_columns=True, chinese_line_breaks=True):
         import numpy as np
         import torch
         from PIL import Image, ImageDraw
 
         page = image[0]
         h, w = int(page.shape[0]), int(page.shape[1])
-        layout, kept = build_layout(parse_detections(detections), w, h, resolution, coord_mode, uppercase_english, min_box, merge=merge_columns)
+        layout, kept = build_layout(parse_detections(detections), w, h, resolution, coord_mode, uppercase_english, min_box, merge=merge_columns, cjk_wrap=chinese_line_breaks)
         pil = Image.fromarray((page.cpu().numpy() * 255).clip(0, 255).astype(np.uint8)).convert("RGB")
         draw = ImageDraw.Draw(pil)
         for i, k in enumerate(kept, 1):
