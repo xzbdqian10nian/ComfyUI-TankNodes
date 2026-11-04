@@ -79,8 +79,7 @@ def test_repeats_and_contained_entries():
 def test_chinese_detected_not_uppercased():
     layout, _ = m.build_layout([{"bbox_2d": [10, 10, 300, 300], "text": "穿女仆装的少女来访了。"}], 800, 1200, 1024)
     d = json.loads(layout)
-    assert d["summary"]["caption"] == "comic, chinese text" and d["items"][0]["text"].replace("
-", "") == "穿女仆装的少女来访了。"
+    assert d["summary"]["caption"] == "comic, chinese text" and d["items"][0]["text"].replace(chr(10), "") == "穿女仆装的少女来访了。"
     sys_p, _ = m.TankMangaTranslatePrompt().build("chinese")
     assert "Simplified Chinese" in sys_p
 
