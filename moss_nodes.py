@@ -100,6 +100,7 @@ def build_layout(detections: list[dict], page_w: int, page_h: int, resolution: i
             continue
         entries.append({"box": [x0, y0, x1, y1], "text": t,
                         "source": str(d.get("ja") or d.get("source") or d.get("original") or "")})
+    entries = dedupe_entries(entries, page_w, page_h)
     if merge:
         entries = merge_columns(entries)
     items, kept = [], []
@@ -125,7 +126,8 @@ SYSTEM_PROMPT = (
     "translate them together as one line of dialogue. The bbox_2d covers the whole inside of that balloon or box "
     "(where the lettering sits, not the whole panel), as relative coordinates from 0 to 1000 [x1, y1, x2, y2], "
     "x to the right and y downwards, measured on this image. Skip page numbers, watermarks, signatures and sound "
-    "effects drawn as artwork outside balloons. Never invent text and never output empty entries. Translate "
+    "effects drawn as artwork outside balloons. List each balloon exactly once; never invent text and never output "
+    "empty entries. Translate "
     "naturally and briefly into {lang}, as it would be lettered in a published translation; keep names and tone. "
     "Answer with ONLY a JSON array, no prose: "
     '[{{"bbox_2d": [x1, y1, x2, y2], "ja": "original Japanese", "text": "translation"}}]'
@@ -135,6 +137,38 @@ SYSTEM_PROMPT = (
 def _union(group):
     return [min(e["box"][0] for e in group), min(e["box"][1] for e in group),
             max(e["box"][2] for e in group), max(e["box"][3] for e in group)]
+
+
+def dedupe_entries(entries: list[dict], page_w: float, page_h: float) -> list[dict]:
+    """Drop repeats a VL model sometimes emits: identical entries, and an entry whose Japanese is already part of a
+    nearby entry's Japanese (its box is folded into that entry, its translation dropped)."""
+    out = []
+    for e in entries:
+        key = (tuple(round(v) for v in e["box"]), e["text"].strip().lower())
+        if any((tuple(round(v) for v in o["box"]), o["text"].strip().lower()) == key for o in out):
+            continue
+        out.append(e)
+    diag = (page_w ** 2 + page_h ** 2) ** 0.5
+
+    def near(a, b):
+        ca = ((a[0] + a[2]) / 2, (a[1] + a[3]) / 2)
+        cb = ((b[0] + b[2]) / 2, (b[1] + b[3]) / 2)
+        return ((ca[0] - cb[0]) ** 2 + (ca[1] - cb[1]) ** 2) ** 0.5 < 0.15 * diag
+
+    def core(t):
+        return "".join(ch for ch in t if ch.isalnum())
+
+    keep = []
+    for i, e in enumerate(out):
+        src = core(e["source"])
+        host = next((o for j, o in enumerate(out) if j != i and src and len(core(o["source"])) > len(src)
+                     and src in core(o["source"]) and near(e["box"], o["box"])), None)
+        if host is not None:
+            hb = host["box"]
+            host["box"] = [min(hb[0], e["box"][0]), min(hb[1], e["box"][1]), max(hb[2], e["box"][2]), max(hb[3], e["box"][3])]
+            continue
+        keep.append(e)
+    return keep
 
 
 def merge_columns(entries: list[dict]) -> list[dict]:
@@ -148,7 +182,7 @@ def merge_columns(entries: list[dict]) -> list[dict]:
             return False
         gap = max(a[0], b[0]) - min(a[2], b[2])
         ov = min(a[3], b[3]) - max(a[1], b[1])
-        return gap <= 0.6 * min(a[2] - a[0], b[2] - b[0]) + 4 and ov >= 0.5 * min(a[3] - a[1], b[3] - b[1])
+        return gap <= 1.0 * min(a[2] - a[0], b[2] - b[0]) + 8 and ov >= 0.5 * min(a[3] - a[1], b[3] - b[1])
 
     groups = [[e] for e in entries]
     merged = True

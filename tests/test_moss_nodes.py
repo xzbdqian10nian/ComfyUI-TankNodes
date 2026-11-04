@@ -59,3 +59,18 @@ def test_columns_of_one_balloon_merge_right_to_left():
 def test_wide_boxes_never_merge():
     dets = [{"bbox_2d": [100, 100, 500, 160], "text": "a"}, {"bbox_2d": [100, 170, 500, 230], "text": "b"}]
     assert len(json.loads(m.build_layout(dets, 1000, 1000, 1024)[0])["items"]) == 2
+
+
+def test_repeats_and_contained_entries():
+    dets = [{"bbox_2d": [816, 84, 935, 293], "ja": "メイド姿の少女が訪ねてきた", "text": "A girl in maid clothes came."},
+            {"bbox_2d": [829, 847, 921, 951], "ja": "お願いします…どんな命令にも従うので", "text": "Please... I'll follow any command."},
+            {"bbox_2d": [724, 878, 777, 947], "ja": "お願いします…", "text": "I beg you..."},
+            {"bbox_2d": [724, 878, 777, 947], "ja": "お願いします…", "text": "I beg you..."},
+            {"bbox_2d": [20, 874, 147, 953], "ja": "メイドとして雇ってもらえます…", "text": "Would you hire me as a maid...?"},
+            {"bbox_2d": [20, 874, 147, 953], "ja": "メイドとして雇ってもらえます…", "text": "Would you hire me as a maid...?"}]
+    items = json.loads(m.build_layout(dets, 698, 988, 1024)[0])["items"]
+    texts = sorted(i["text"] for i in items)
+    assert texts == ["A GIRL IN MAID CLOTHES CAME.", "PLEASE... I'LL FOLLOW ANY COMMAND.", "WOULD YOU HIRE ME AS A MAID...?"]
+    right = next(i for i in items if i["text"].startswith("PLEASE"))
+    w, h = m.target_size(698, 988, 1024)
+    assert right["bbox"][1] == round(0.724 * w - w / 2)       # the folded column widened the balloon box to the left
