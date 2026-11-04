@@ -144,7 +144,7 @@ def build_layout(detections: list[dict], page_w: int, page_h: int, resolution: i
             t = wrap_cjk(t, x1 - x0, y1 - y0)
         canvas_box = [x0 * w / page_w, y0 * h / page_h, x1 * w / page_w, y1 * h / page_h]
         items.append({"label": "text", "caption": "text", "text": t, "bbox": centered_box(canvas_box, (w, h))})
-        kept.append({"text": t, "source": e["source"], "box": e["box"]})
+        kept.append({"text": t.replace(chr(10), ""), "source": e["source"], "box": e["box"]})
     if language == "auto":
         language = detect_language(i["text"] for i in items)
     layout = {"summary": {"caption": LANGS[language][1]}, "items": items,
