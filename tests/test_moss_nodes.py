@@ -74,3 +74,11 @@ def test_repeats_and_contained_entries():
     right = next(i for i in items if i["text"].startswith("PLEASE"))
     w, h = m.target_size(698, 988, 1024)
     assert right["bbox"][1] == round(0.724 * w - w / 2)       # the folded column widened the balloon box to the left
+
+
+def test_chinese_detected_not_uppercased():
+    layout, _ = m.build_layout([{"bbox_2d": [10, 10, 300, 300], "text": "穿女仆装的少女来访了。"}], 800, 1200, 1024)
+    d = json.loads(layout)
+    assert d["summary"]["caption"] == "comic, chinese text" and d["items"][0]["text"] == "穿女仆装的少女来访了。"
+    sys_p, _ = m.TankMangaTranslatePrompt().build("chinese")
+    assert "Simplified Chinese" in sys_p

@@ -13,8 +13,20 @@ import re
 
 STRIDE = 16
 AREA_TOLERANCE = 1.10
-LANGS = {"english": ("English", "comic, english text"), "korean": ("Korean (한국어)", "comic, korean text")}
+LANGS = {"english": ("English", "comic, english text"), "korean": ("Korean (한국어)", "comic, korean text"),
+         "chinese": ("Simplified Chinese (简体中文)", "comic, chinese text")}
 _HANGUL = re.compile(r"[가-힣]")
+_HAN = re.compile(r"[\u4e00-\u9fff]")
+_KANA = re.compile(r"[\u3040-\u30ff]")
+
+
+def detect_language(texts) -> str:
+    joined = "".join(texts)
+    if _HANGUL.search(joined):
+        return "korean"
+    if _HAN.search(joined) and not _KANA.search(joined):
+        return "chinese"
+    return "english"
 
 
 def target_size(width: int, height: int, resolution: int) -> tuple[int, int]:
@@ -106,14 +118,14 @@ def build_layout(detections: list[dict], page_w: int, page_h: int, resolution: i
     items, kept = [], []
     for e in entries:
         t = e["text"]
-        if uppercase_english and not _HANGUL.search(t):
+        if uppercase_english and not _HANGUL.search(t) and not _HAN.search(t):
             t = t.upper()
         x0, y0, x1, y1 = e["box"]
         canvas_box = [x0 * w / page_w, y0 * h / page_h, x1 * w / page_w, y1 * h / page_h]
         items.append({"label": "text", "caption": "text", "text": t, "bbox": centered_box(canvas_box, (w, h))})
         kept.append({"text": t, "source": e["source"], "box": e["box"]})
     if language == "auto":
-        language = "korean" if any(_HANGUL.search(i["text"]) for i in items) else "english"
+        language = detect_language(i["text"] for i in items)
     layout = {"summary": {"caption": LANGS[language][1]}, "items": items,
               "bbox_coord_space": "abs_centralized", "bbox_format": "yxyx"}
     return json.dumps(layout, ensure_ascii=False, separators=(",", ":")), kept
