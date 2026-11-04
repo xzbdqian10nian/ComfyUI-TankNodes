@@ -134,10 +134,55 @@ def _text_of(d: dict) -> str:
     return ""
 
 
+def _rows_fixed(t: str, per: int) -> list[str]:
+    rows, cur = [], ""
+    for ch in t:
+        if len(cur) >= per and ch not in _NO_LINE_START:
+            rows.append(cur); cur = ""
+        cur += ch
+    if cur:
+        rows.append(cur)
+    return rows
+
+
+def fit_chinese(entries: list[dict], page_w: float, page_h: float, inner=(0.72, 0.80), line=1.2) -> list[dict]:
+    """The swap_text LoRA fills whatever box it is given (it trained on tight boxes around translated lettering).
+    A balloon's bounding box reaches past the round balloon and its size has nothing to do with how much text there is,
+    so Chinese came out too big, overflowing, with a different size in every balloon. Here each balloon gets the
+    block its text needs inside the balloon's inner rectangle, broken into rows that maximise the glyph size, and the
+    whole page shares one size (capped at 1.25x the median and 5.5% of the short side) so the lettering looks uniform."""
+    plans = []
+    for e in entries:
+        x0, y0, x1, y1 = e["box"]
+        bw, bh = (x1 - x0) * inner[0], (y1 - y0) * inner[1]
+        t = e["text"].replace(chr(10), "")
+        n = max(1, len(t))
+        best = (0.0, n)
+        for k in range(1, n + 1):
+            fs = min(bw / k, bh / (len(_rows_fixed(t, k)) * line))
+            if fs > best[0]:
+                best = (fs, k)
+        plans.append((e, t, best[0], best[1]))
+    if not plans:
+        return entries
+    sizes = sorted(p[2] for p in plans)
+    cap = min(1.25 * sizes[len(sizes) // 2], 0.055 * min(page_w, page_h))
+    out = []
+    for e, t, fs, k in plans:
+        fs = min(fs, cap)
+        rows = _rows_fixed(t, k)
+        x0, y0, x1, y1 = e["box"]
+        cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+        bw, bh = max(len(r) for r in rows) * fs, len(rows) * fs * line
+        out.append({**e, "text": chr(10).join(rows), "balloon": e["box"], "fitted": True,
+                    "box": [cx - bw / 2, cy - bh / 2, cx + bw / 2, cy + bh / 2]})
+    return out
+
+
 def build_layout(detections: list[dict], page_w: int, page_h: int, resolution: int, coord_mode: str = "auto",
                  uppercase_english: bool = True, min_box: int = 8, language: str = "auto",
-                 merge: bool = True, cjk_wrap: bool = True) -> tuple[str, list[dict]]:
-    """Return (layout JSON, kept items with page-pixel boxes for the preview)."""
+                 merge: bool = True, cjk_wrap: bool = True, fit: str = "auto") -> tuple[str, list[dict]]:
+    """Return (layout JSON, kept items with page-pixel boxes for the preview). fit: auto (Chinese gets fit_chinese), fit, balloon."""
     boxes = [(d, _box_of(d), _text_of(d)) for d in detections]
     boxes = [(d, b, t) for d, b, t in boxes if b and t]
     if coord_mode == "auto":
@@ -158,19 +203,21 @@ def build_layout(detections: list[dict], page_w: int, page_h: int, resolution: i
     entries = dedupe_entries(entries, page_w, page_h)
     if merge:
         entries = merge_columns(entries)
+    if language == "auto":
+        language = detect_language(e["text"] for e in entries)
+    if fit == "fit" or (fit == "auto" and language == "chinese"):
+        entries = fit_chinese(entries, page_w, page_h)
     items, kept = [], []
     for e in entries:
         t = e["text"]
         if uppercase_english and not _HANGUL.search(t) and not _HAN.search(t):
             t = t.upper()
         x0, y0, x1, y1 = e["box"]
-        if cjk_wrap and _HAN.search(t) and not _HANGUL.search(t) and not _KANA.search(t):
+        if cjk_wrap and not e.get("fitted") and _HAN.search(t) and not _HANGUL.search(t) and not _KANA.search(t):
             t = wrap_cjk(t, x1 - x0, y1 - y0)
         canvas_box = [x0 * w / page_w, y0 * h / page_h, x1 * w / page_w, y1 * h / page_h]
         items.append({"label": "text", "caption": "text", "text": t, "bbox": centered_box(canvas_box, (w, h))})
-        kept.append({"text": t.replace(chr(10), ""), "source": e["source"], "box": e["box"]})
-    if language == "auto":
-        language = detect_language(i["text"] for i in items)
+        kept.append({"text": t.replace(chr(10), ""), "source": e["source"], "box": e.get("balloon") or e["box"]})
     layout = {"summary": {"caption": LANGS[language][1]}, "items": items,
               "bbox_coord_space": "abs_centralized", "bbox_format": "yxyx"}
     return json.dumps(layout, ensure_ascii=False, separators=(",", ":")), kept
@@ -306,6 +353,8 @@ class TankMossSwapTextLayout:
             "min_box": ("INT", {"default": 8, "min": 0, "max": 256, "tooltip": "Drop boxes thinner than this (page pixels)."}),
             "merge_columns": ("BOOLEAN", {"default": True, "tooltip": "Merge side-by-side vertical column boxes of one balloon into one item."}),
             "chinese_line_breaks": ("BOOLEAN", {"default": True, "tooltip": "Pre-break Chinese lines to the balloon's shape (the LoRA drops or doubles characters where it breaks Chinese lines itself)."}),
+        }, "optional": {
+            "text_box": (["auto", "fit", "balloon"], {"default": "auto", "tooltip": "auto: Chinese gets a text block sized for its characters inside the balloon with one font size per page (fit); English / Korean use the balloon box (balloon)."}),
         }}
 
     RETURN_TYPES = ("STRING", "IMAGE", "STRING")
@@ -314,14 +363,14 @@ class TankMossSwapTextLayout:
     CATEGORY = "TankNodes/MOSS"
     DESCRIPTION = "Turn a VL model's text-block boxes + translations into the layout-JSON prompt of the MOSS swap_text LoRA."
 
-    def convert(self, image, detections, resolution, coord_mode="auto", uppercase_english=True, min_box=8, merge_columns=True, chinese_line_breaks=True):
+    def convert(self, image, detections, resolution, coord_mode="auto", uppercase_english=True, min_box=8, merge_columns=True, chinese_line_breaks=True, text_box="auto"):
         import numpy as np
         import torch
         from PIL import Image, ImageDraw
 
         page = image[0]
         h, w = int(page.shape[0]), int(page.shape[1])
-        layout, kept = build_layout(parse_detections(detections), w, h, resolution, coord_mode, uppercase_english, min_box, merge=merge_columns, cjk_wrap=chinese_line_breaks)
+        layout, kept = build_layout(parse_detections(detections), w, h, resolution, coord_mode, uppercase_english, min_box, merge=merge_columns, cjk_wrap=chinese_line_breaks, fit=text_box)
         pil = Image.fromarray((page.cpu().numpy() * 255).clip(0, 255).astype(np.uint8)).convert("RGB")
         draw = ImageDraw.Draw(pil)
         for i, k in enumerate(kept, 1):

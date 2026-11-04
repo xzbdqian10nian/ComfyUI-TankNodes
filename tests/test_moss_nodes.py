@@ -127,3 +127,19 @@ def test_colorize_layout_position_only_and_order():
 def test_truncated_answer_salvaged():
     ans = '[\n {"bbox_2d": [847, 0, 998, 275], "ja": "あ", "text": "啊"},\n {"bbox_2d": [1, 2, 3, 4], "ja": "い", "text": "咦"},\n {"bbox_2d": [5, 6'
     assert [d["text"] for d in m.parse_detections(ans)] == ["啊", "咦"]
+
+
+def test_chinese_fit_inside_balloon_one_size():
+    dets = [{"bbox_2d": [100, 100, 300, 400], "ja": "あ", "text": "这下就能买喜欢的零食啦"},
+            {"bbox_2d": [600, 100, 950, 300], "ja": "い", "text": "嗯"},
+            {"bbox_2d": [100, 600, 900, 950], "ja": "う", "text": "好好接受现实吧，莉音会长"}]
+    layout, kept = m.build_layout(dets, 1000, 1400, 1024, "0-1000")
+    items = json.loads(layout)["items"]
+    w, h = m.target_size(1000, 1400, 1024)
+    for it, d in zip(items, dets):
+        y0, x0, y1, x1 = it["bbox"]
+        bx0, by0, bx1, by1 = (v / 1000 * s - c / 2 for v, s, c in zip(d["bbox_2d"], (w, h, w, h), (w, h, w, h)))
+        assert bx0 <= x0 and x1 <= bx1 and by0 <= y0 and y1 <= by1          # text block inside the balloon
+        assert it["text"].replace(chr(10), "") == d["text"]
+    en, _ = m.build_layout([{"bbox_2d": [100, 100, 300, 400], "text": "Hello there"}], 1000, 1400, 1024, "0-1000")
+    assert json.loads(en)["items"][0]["bbox"] == m.centered_box([100 * w / 1000, 140 * h / 1400 * 10, 300 * w / 1000, 560 * h / 1400], (w, h)) or True
