@@ -94,3 +94,31 @@ def test_chinese_prewrap_and_kinsoku():
     assert "\n" in json.loads(layout)["items"][0]["text"]
     en, _ = m.build_layout([{"bbox_2d": [10, 10, 300, 300], "text": "Hello there"}], 800, 1200, 1024)
     assert "\n" not in json.loads(en)["items"][0]["text"]
+
+
+def test_colorize_layout_per_character():
+    sheet = m.parse_sheet("A | wavy side ponytails | light brown hair, green eyes\nB | short black bob | black hair, blue eyes\n# note")
+    assert [e["name"] for e in sheet] == ["A", "B"] and sheet[0]["colors"] == "light brown hair, green eyes"
+    dets = [{"bbox_2d": [600, 50, 950, 450], "who": "A"}, {"bbox_2d": [100, 500, 400, 950], "who": "b"},
+            {"bbox_2d": [600, 50, 950, 450], "who": "A"}, {"bbox_2d": [10, 10, 30, 30], "who": "unknown"}]
+    layout, kept = m.build_colorize_layout(dets, sheet, 1000, 1400, 1024, "comic, school uniform")
+    d = json.loads(layout)
+    assert d["summary"]["caption"] == "comic, school uniform" and len(d["items"]) == 2
+    assert d["items"][0]["caption"] == "light brown hair, green eyes" and d["items"][0]["position"] == "top right"
+    assert d["items"][1]["caption"] == "black hair, blue eyes" and d["items"][1]["position"] == "bottom left"
+    assert d["bbox_format"] == "yxyx"
+    sys_p, p, sheet_out = m.TankMangaCharacterPrompt().build("A | side ponytails | brown hair")
+    assert "A | side ponytails" in p and "who" in sys_p and sheet_out.startswith("A |")
+
+
+def test_translate_prompt_meaning_names_stutters():
+    sys_p, _ = m.TankMangaTranslatePrompt().build("chinese")
+    assert "never the sound" in sys_p and "真冬" in sys_p and "stutter" in sys_p and "{" not in sys_p.split("JSON array")[0]
+
+
+def test_colorize_layout_position_only_and_order():
+    sheet = m.parse_sheet("A | x | red hair\nB | y | blue hair")
+    dets = [{"bbox_2d": [100, 600, 400, 950], "who": "B"}, {"bbox_2d": [600, 50, 950, 450], "who": "A"}]
+    d = json.loads(m.build_colorize_layout(dets, sheet, 1000, 1400, 1024, add_bbox=False)[0])
+    assert "bbox_format" not in d and all("bbox" not in i for i in d["items"])
+    assert [i["caption"] for i in d["items"]] == ["red hair", "blue hair"]       # reading order: top row first

@@ -160,8 +160,13 @@ SYSTEM_PROMPT = (
     "(where the lettering sits, not the whole panel), as relative coordinates from 0 to 1000 [x1, y1, x2, y2], "
     "x to the right and y downwards, measured on this image. Skip page numbers, watermarks, signatures and sound "
     "effects drawn as artwork outside balloons. List each balloon exactly once; never invent text and never output "
-    "empty entries. Translate "
-    "naturally and briefly into {lang}, as it would be lettered in a published translation; keep names and tone. "
+    "empty entries; if you cannot read a block with confidence, leave it out rather than guess. Translate "
+    "naturally and briefly into {lang}, as it would be lettered in a published translation, keeping the tone. "
+    "Translate the meaning, never the sound: do not transliterate Japanese words syllable by syllable. Names: use the "
+    "official {lang} form when you know the character; in Chinese write Japanese names with their kanji (まふゆ -> "
+    "真冬), never with phonetic characters. Honorifics (さん, くん, ちゃん) are dropped or rendered naturally - never as "
+    "Miss / 小姐 between classmates. Keep stutters and hesitations as stutters (ま、任せて -> 交、交给我吧 / L-leave it "
+    "to me; とっとっとっても -> 非、非、非常), and interjections as natural interjections (は？ -> 哈？ / Huh?). "
     "Answer with ONLY a JSON array, no prose: "
     '[{{"bbox_2d": [x1, y1, x2, y2], "ja": "original Japanese", "text": "translation"}}]'
 )
@@ -301,3 +306,168 @@ class TankMossSwapTextLayout:
         preview = torch.from_numpy(np.asarray(pil).astype(np.float32) / 255.0)[None, ...]
         lines = "\n".join(f"{i}. {k['source']} → {k['text']}" for i, k in enumerate(kept, 1)) or "(no text blocks found)"
         return layout, preview, lines
+
+
+# ---------------------------------------------------------------- per-character colorize (colorize LoRA layout)
+CHAR_SYSTEM = (
+    "You are a manga panel analyst. The user gives a character sheet: one line per character, `name | how to recognise "
+    "them in black-and-white art`. Look at the whole page and find EVERY appearance of these characters in EVERY panel "
+    "(the same character usually appears in several panels). For each appearance return one box around that character "
+    "(head and the visible body, staying inside its panel) and which character it is. Use \"unknown\" for people who are "
+    "not on the sheet; skip tiny background people. Coordinates are relative 0 to 1000 [x1, y1, x2, y2], x to the right, "
+    "y downwards, measured on this image. Answer with ONLY a JSON array, no prose: "
+    '[{"bbox_2d": [x1, y1, x2, y2], "who": "name"}]'
+)
+
+
+def parse_sheet(text: str) -> list[dict]:
+    """`name | recognition cues | colours` per line (full-width bar also accepted); two fields = `name | colours`."""
+    out = []
+    for raw in (text or "").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = [p.strip() for p in re.split(r"[|｜]", line)]
+        if len(parts) >= 3:
+            out.append({"name": parts[0], "cues": parts[1], "colors": ", ".join(p for p in parts[2:] if p)})
+        elif len(parts) == 2:
+            out.append({"name": parts[0], "cues": "", "colors": parts[1]})
+    return out
+
+
+def _match(who: str, sheet: list[dict]):
+    w = (who or "").strip().lower()
+    if not w or w == "unknown":
+        return None
+    for e in sheet:
+        if e["name"].lower() == w:
+            return e
+    for e in sheet:
+        if e["name"].lower() in w or w in e["name"].lower():
+            return e
+    return None
+
+
+def _position_word(cx: float, cy: float) -> str:
+    h = "left" if cx < 1 / 3 else "right" if cx > 2 / 3 else "center"
+    v = "top" if cy < 1 / 3 else "bottom" if cy > 2 / 3 else ""
+    return f"{v} {h}".strip() if v and h != "center" else (v or h)
+
+
+def _positions_and_order(boxes: list[list[float]], size: tuple[int, int]) -> tuple[list[str], list[int]]:
+    """Position phrase per box + emit order, with anime_tools' rules (the ones the colorize LoRA's captions were
+    written with) when it is installed, else a coarse thirds grid in reading order."""
+    try:
+        from anime_tools.captions.position_clauses import assign_positions, ordered_indices
+        return list(assign_positions(boxes, size)), list(ordered_indices(boxes, size))
+    except Exception:  # noqa: BLE001 — anime_tools missing or a degenerate layout
+        w, h = size
+        words = [_position_word((b[0] + b[2]) / 2 / w, (b[1] + b[3]) / 2 / h) for b in boxes]
+        order = sorted(range(len(boxes)), key=lambda i: (round(boxes[i][1] / max(h / 6, 1)), -boxes[i][0]))
+        return words, order
+
+
+def build_colorize_layout(detections: list[dict], sheet: list[dict], page_w: int, page_h: int, resolution: int,
+                          base_caption: str = "comic", add_position: bool = True, min_box: int = 12,
+                          add_bbox: bool = True) -> tuple[str, list[dict]]:
+    w, h = target_size(page_w, page_h, resolution)
+    found, seen = [], set()
+    for d in detections:
+        b = _box_of(d)
+        entry = _match(str(d.get("who") or d.get("name") or d.get("label") or ""), sheet)
+        if not b or entry is None:
+            continue
+        x0, y0, x1, y1 = (min(max(v, 0.0), 1000.0) for v in b)
+        x0, x1 = sorted((x0 * page_w / 1000, x1 * page_w / 1000))
+        y0, y1 = sorted((y0 * page_h / 1000, y1 * page_h / 1000))
+        if x1 - x0 < min_box or y1 - y0 < min_box:
+            continue
+        key = (entry["name"], round(x0 / 8), round(y0 / 8), round(x1 / 8), round(y1 / 8))
+        if key in seen:
+            continue
+        seen.add(key)
+        found.append((entry, [x0, y0, x1, y1]))
+    words, order = _positions_and_order([f[1] for f in found], (page_w, page_h)) if found else ([], [])
+    items, kept = [], []
+    for i in order:
+        entry, (x0, y0, x1, y1) = found[i]
+        item = {"label": "character"}
+        if add_position and words[i]:
+            item["position"] = words[i]
+        item["caption"] = entry["colors"]
+        if add_bbox:
+            item["bbox"] = centered_box([x0 * w / page_w, y0 * h / page_h, x1 * w / page_w, y1 * h / page_h], (w, h))
+        items.append(item)
+        kept.append({"name": entry["name"], "colors": entry["colors"], "box": [x0, y0, x1, y1], "position": words[i]})
+    layout = {"summary": {"caption": base_caption or "comic"}, "items": items}
+    if items and add_bbox:
+        layout["bbox_coord_space"] = "abs_centralized"
+        layout["bbox_format"] = "yxyx"
+    return json.dumps(layout, ensure_ascii=False, separators=(",", ":")), kept
+
+
+class TankMangaCharacterPrompt:
+    """Prompts for Local Multimodal Chat: find every appearance of the sheet's characters on a manga page."""
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {"character_sheet": ("STRING", {"multiline": True, "default":
+            "A | girl with wavy side ponytails | light brown hair, green eyes\nB | girl with short black bob hair | black hair, blue eyes",
+            "tooltip": "One character per line: name | how to recognise them in B&W art | colours (hair, eyes, clothes)."})}}
+
+    RETURN_TYPES = ("STRING", "STRING", "STRING")
+    RETURN_NAMES = ("system_prompt", "prompt", "character_sheet")
+    FUNCTION = "build"
+    CATEGORY = "TankNodes/MOSS"
+    DESCRIPTION = "System + user prompt that makes a local VL model box every appearance of the listed characters."
+
+    def build(self, character_sheet):
+        sheet = parse_sheet(character_sheet)
+        lines = "\n".join(f"{e['name']} | {e['cues'] or e['colors']}" for e in sheet)
+        return CHAR_SYSTEM, "Character sheet:\n" + lines + "\nFind every appearance of these characters on this page.", character_sheet
+
+
+class TankMossColorizeLayout:
+    """VL character boxes + character sheet -> MOSS colorize layout JSON (one character item per appearance)."""
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {
+            "image": ("IMAGE", {"tooltip": "The B&W page (same image as the i2i Reference node)."}),
+            "detections": ("STRING", {"forceInput": True, "tooltip": "VL answer: [{bbox_2d, who}]."}),
+            "character_sheet": ("STRING", {"forceInput": True, "tooltip": "Same sheet as the Character Prompt node."}),
+            "base_caption": ("STRING", {"default": "comic", "multiline": True, "tooltip": "Page-level caption: shared colours (uniforms, scenery) go here."}),
+            "resolution": ("INT", {"default": 1024, "min": 256, "max": 2048, "step": 16}),
+            "add_position": ("BOOLEAN", {"default": True, "tooltip": "Also write a left / right / center position word (how the LoRA's captions name places)."}),
+            "add_bbox": ("BOOLEAN", {"default": True, "tooltip": "Write each appearance's box (off = position words only, as in the LoRA's training captions)."}),
+        }}
+
+    RETURN_TYPES = ("STRING", "IMAGE", "STRING")
+    RETURN_NAMES = ("layout_json", "preview", "report")
+    FUNCTION = "convert"
+    CATEGORY = "TankNodes/MOSS"
+    DESCRIPTION = "Per-character colour control for the MOSS colorize LoRA: each detected appearance gets its sheet colours and box."
+
+    def convert(self, image, detections, character_sheet, base_caption, resolution, add_position=True, add_bbox=True):
+        import numpy as np
+        import torch
+        from PIL import Image, ImageDraw
+
+        page = image[0]
+        h, w = int(page.shape[0]), int(page.shape[1])
+        sheet = parse_sheet(character_sheet)
+        layout, kept = build_colorize_layout(parse_detections(detections), sheet, w, h, resolution, base_caption, add_position, add_bbox=add_bbox)
+        pil = Image.fromarray((page.cpu().numpy() * 255).clip(0, 255).astype(np.uint8)).convert("RGB")
+        draw = ImageDraw.Draw(pil)
+        palette = [(230, 40, 40), (40, 110, 230), (30, 160, 60), (200, 120, 0), (150, 40, 200), (0, 160, 170)]
+        colour = {e["name"]: palette[i % len(palette)] for i, e in enumerate(sheet)}
+        for k in kept:
+            x0, y0, x1, y1 = k["box"]
+            draw.rectangle([x0, y0, x1, y1], outline=colour.get(k["name"], (255, 0, 0)), width=max(3, w // 250))
+            draw.text((x0 + 4, y0 + 3), k["name"], fill=colour.get(k["name"], (255, 0, 0)))
+        preview = torch.from_numpy(np.asarray(pil).astype(np.float32) / 255.0)[None, ...]
+        counts = {}
+        for k in kept:
+            counts[k["name"]] = counts.get(k["name"], 0) + 1
+        report = "\n".join(f"{e['name']}: {counts.get(e['name'], 0)} x -> {e['colors']}" for e in sheet) or "(empty sheet)"
+        return layout, preview, report

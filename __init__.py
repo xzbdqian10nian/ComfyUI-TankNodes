@@ -3,7 +3,7 @@
 from .api_nodes import VisionAPIDirect, VisionAPIEnv
 from .local_nodes import Qwen38VLLoader, VisionChat, VisionUnload
 from .text_nodes import TankTextSplit
-from .moss_nodes import TankMangaTranslatePrompt, TankMossSwapTextLayout
+from .moss_nodes import TankMangaTranslatePrompt, TankMossSwapTextLayout, TankMangaCharacterPrompt, TankMossColorizeLayout
 from .h3_optimizer import TankH3PromptOptimizer
 from .prompt_nodes import (TankFlux3PromptEngineering, TankImageBatch, TankMossPromptEngineering, TankOptionalImageDownscale, TankPromptOptimizer,
                            TankPromptTemplate,
@@ -31,6 +31,8 @@ NODE_CLASS_MAPPINGS = {
     "TankOptionalImageDownscale": TankOptionalImageDownscale,
     "TankMangaTranslatePrompt": TankMangaTranslatePrompt,
     "TankMossSwapTextLayout": TankMossSwapTextLayout,
+    "TankMangaCharacterPrompt": TankMangaCharacterPrompt,
+    "TankMossColorizeLayout": TankMossColorizeLayout,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -50,6 +52,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "TankOptionalImageDownscale": "Reference Image Resize (optional input) · Tank",
     "TankMangaTranslatePrompt": "Manga Translate Prompt (VL) · Tank",
     "TankMossSwapTextLayout": "MOSS Swap-Text Layout · Tank",
+    "TankMangaCharacterPrompt": "Manga Character Finder Prompt (VL) · Tank",
+    "TankMossColorizeLayout": "MOSS Per-Character Colorize Layout · Tank",
 }
 
 WEB_DIRECTORY = "./web"
