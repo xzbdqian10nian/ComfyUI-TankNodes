@@ -14,17 +14,20 @@ one correction pass); all others run as a plain system prompt.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
 import time
 from typing import Any
 
-from .h3_optimizer import Asset, Job, _complete, _frames_to_urls, optimize
+from . import h3_optimizer as _h3_optimizer
+from .h3_optimizer import H3_EDIT_MARKER, H3_MARKER, H3_MV_MARKER, _complete, _frames_to_urls
 from .reasoning import REASONING_CHOICES, validate_reasoning_choice
 
 _TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompt_templates")
-H3_MARKER = "[[tank:h3]]"
+_expand_template_includes = _h3_optimizer.expand_template_includes
+_h3_edit_template_options = _h3_optimizer.h3_edit_template_options
 
 
 def _builtin_index() -> list[dict[str, Any]]:
@@ -45,12 +48,44 @@ def _user_store_path() -> str:
 
 
 def _user_templates() -> list[dict[str, Any]]:
+    """自建模板。名字里的「/」换成「、」；换完跟内置或别的自建模板重名时加（2）（3）区分，原名留作别名，
+    两份正文都保留。本来就不带「/」的模板优先占用自己的名字，老工作流按原名仍能找到各自那一份。"""
     try:
         with open(_user_store_path(), encoding="utf-8") as handle:
             data = json.load(handle)
-        return [dict(t, builtin=False) for t in data.get("templates", []) if t.get("label") and isinstance(t.get("text"), str)]
     except (OSError, ValueError):
         return []
+    raw = [t for t in data.get("templates", []) if isinstance(t, dict) and t.get("label") and isinstance(t.get("text"), str)]
+    taken = {item["label"] for item in _builtin_index()}
+    labels: dict[int, str] = {}
+    for already_safe in (True, False):
+        for index, item in enumerate(raw):
+            original = str(item["label"]).strip()
+            if (_menu_safe(original) == original) != already_safe:
+                continue
+            base = candidate = _menu_safe(original)
+            number = 2
+            while candidate in taken:
+                candidate = f"{base}（{number}）"
+                number += 1
+            taken.add(candidate)
+            labels[index] = candidate
+    out = []
+    for i, item in enumerate(raw):
+        if i not in labels:
+            continue
+        aliases = [a for a in item.get("aliases", []) if isinstance(a, str) and a.strip() and a != labels[i]]
+        original = str(item["label"]).strip()
+        if original != labels[i] and original not in aliases:
+            aliases.append(original)
+        out.append(dict(item, label=labels[i], aliases=aliases, builtin=False))
+    return out
+
+
+def _find_user_template(items: list[dict[str, Any]], name: str) -> dict[str, Any] | None:
+    """按准确名字找自建模板：现名优先，其次旧名（别名）；不做「/」→「、」的模糊匹配，免得删错、改错。"""
+    name = str(name or "").strip()
+    return next((t for t in items if t["label"] == name), None) or next((t for t in items if name in t.get("aliases", ())), None)
 
 
 def _save_user_templates(items: list[dict[str, Any]]) -> None:
@@ -58,7 +93,8 @@ def _save_user_templates(items: list[dict[str, Any]]) -> None:
     os.makedirs(os.path.dirname(path), exist_ok=True)
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as handle:
-        json.dump({"templates": [{"label": t["label"], "text": t["text"], "updated": t.get("updated", int(time.time()))} for t in items]},
+        json.dump({"templates": [{"label": t["label"], "text": t["text"], "aliases": list(t.get("aliases", [])),
+                                  "updated": t.get("updated", int(time.time()))} for t in items]},
                   handle, ensure_ascii=False, indent=1)
     os.replace(tmp, path)
 
@@ -67,16 +103,35 @@ def _load_index() -> list[dict[str, Any]]:
     return _builtin_index() + _user_templates()
 
 
-def _template_text(label: str) -> str:
-    for item in _load_index():
+def _menu_safe(label: str) -> str:
+    """ComfyUI 新版下拉框把「/」当子菜单分隔符（文生/图生 会被拆成四层空菜单），模板名一律不用「/」。"""
+    return re.sub(r"\s*[/／]\s*", "、", str(label or "").strip())
+
+
+def _resolve_template(label: str) -> dict[str, Any] | None:
+    """按名称找模板：现名 > 旧名（aliases，老工作流和网页卡片里存的） > 去掉「/」后同名。"""
+    items = _load_index()
+    label = str(label or "").strip()
+    for item in items:
         if item["label"] == label:
-            if not item.get("file"):
-                return item.get("text", "")
-            with open(os.path.join(_TEMPLATE_DIR, item["file"]), encoding="utf-8") as handle:
-                text = handle.read()
-            if item.get("append") == "qwen21_plain":
-                text = text.rstrip() + QWEN21_PLAIN_OUTPUT
-            return text
+            return item
+    for item in items:
+        if label in item.get("aliases", ()):
+            return item
+    safe = _menu_safe(label)
+    return next((item for item in items if _menu_safe(item["label"]) == safe), None)
+
+
+def _template_text(label: str) -> str:
+    item = _resolve_template(label)
+    if item is not None:
+        if not item.get("file"):
+            return _expand_template_includes(item.get("text", ""))
+        with open(os.path.join(_TEMPLATE_DIR, item["file"]), encoding="utf-8") as handle:
+            text = _expand_template_includes(handle.read())
+        if item.get("append") == "qwen21_plain":
+            text = text.rstrip() + QWEN21_PLAIN_OUTPUT
+        return text
     raise ValueError(f"Unknown prompt template: {label}")
 
 
@@ -96,7 +151,8 @@ def _register_template_routes() -> None:
                 text = _template_text(item["label"])
             except Exception:
                 text = ""
-            out.append({"label": item["label"], "builtin": bool(item.get("builtin")), "text": text})
+            out.append({"label": item["label"], "aliases": list(item.get("aliases", ())), "builtin": bool(item.get("builtin")),
+                        "text": text})
         return out
 
     @routes.get("/tank/prompt_templates")
@@ -110,9 +166,9 @@ def _register_template_routes() -> None:
             assert isinstance(body, dict)
         except Exception:
             return web.json_response({"error": "请求格式不对（需要 JSON）。"}, status=400)
-        label = str(body.get("label") or "").strip()
+        label = _menu_safe(body.get("label") or "")
         text = str(body.get("text") or "")
-        old = str(body.get("old_label") or "").strip()
+        old_name = str(body.get("old_label") or "").strip()
         if not label or not text.strip():
             return web.json_response({"error": "模板名称和内容都不能为空。"}, status=400)
         if len(label) > 80 or len(text) > 200000:
@@ -120,8 +176,18 @@ def _register_template_routes() -> None:
         if label in {i["label"] for i in _builtin_index()}:
             return web.json_response({"error": "这是内置模板的名字，请换一个名称（内置模板不能被覆盖，可以复制后修改）。"}, status=400)
         items = _user_templates()
-        items = [t for t in items if t["label"] not in (label, old)]
-        items.append({"label": label, "text": text, "updated": int(time.time())})
+        old = _find_user_template(items, old_name) if old_name else None
+        if old_name and old is None:
+            return web.json_response({"error": "要修改的模板不存在了，请刷新后再试。"}, status=400)
+        others = [t for t in items if t is not old]
+        taken = {t["label"] for t in others} | {a for t in others for a in t.get("aliases", ())} \
+            | {a for i in _builtin_index() for a in i.get("aliases", ())}
+        if label in taken:   # 新建、复制、改名都不许占用别的模板的名字或旧名（老工作流靠旧名找模板）
+            return web.json_response({"error": "这个名字已经被另一个模板用过，请换一个名称。"}, status=400)
+        aliases = [a for a in (old.get("aliases", []) if old else []) if a != label]
+        if old and old["label"] != label and old["label"] not in aliases:
+            aliases.append(old["label"])          # 改名后旧名留作别名，老工作流还能找到
+        items = others + [{"label": label, "text": text, "aliases": sorted(set(aliases)), "updated": int(time.time())}]
         _save_user_templates(items)
         return web.json_response({"saved": label, "templates": listing()})
 
@@ -132,12 +198,12 @@ def _register_template_routes() -> None:
             assert isinstance(body, dict)
         except Exception:
             return web.json_response({"error": "请求格式不对（需要 JSON）。"}, status=400)
-        label = str(body.get("label") or "").strip()
         items = _user_templates()
-        if label not in {t["label"] for t in items}:
+        target = _find_user_template(items, body.get("label") or "")
+        if target is None:
             return web.json_response({"error": "只能删除自己新建的模板。"}, status=400)
-        _save_user_templates([t for t in items if t["label"] != label])
-        return web.json_response({"deleted": label, "templates": listing()})
+        _save_user_templates([t for t in items if t is not target])
+        return web.json_response({"deleted": target["label"], "templates": listing()})
 
 
 class TankPromptTemplate:
@@ -161,6 +227,22 @@ class TankPromptTemplate:
     DESCRIPTION = ("The single prompt-template node: official rules for H3 / Qwen-Image 2.1 / FLUX3 / MOSS, generic templates, and your own "
                    "templates (use the 管理模板 button on the node to edit, copy, add or delete). Feeds Prompt Optimizer · Tank or the "
                    "system prompt of Local Multimodal Chat · Tank.")
+
+    @classmethod
+    def VALIDATE_INPUTS(cls, template=None):
+        # 自己校验 template：老工作流 / 网页卡片里存的旧模板名（带「/」）也认，不报「值不在列表里」
+        if template is None or _resolve_template(template) is not None:
+            return True
+        return f"未知的提示词模板：{template}"
+
+    @classmethod
+    def IS_CHANGED(cls, template, extra_rules=""):
+        try:
+            text = _template_text(template)
+        except Exception:
+            return f"missing:{template}"
+        payload = f"{text}\n---\n{str(extra_rules or '').strip()}"
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
     def run(self, template, extra_rules=""):
         text = _template_text(template)
@@ -231,9 +313,18 @@ class TankPromptOptimizer:
                 "first_frame": ("IMAGE", {"tooltip": "First frame. Alone: image-to-video; with last frame: first/last-frame video."}),
                 "last_frame": ("IMAGE", {"tooltip": "Last frame."}),
                 **refs,
-                "video_frames": ("IMAGE", {"tooltip": "Frames of a source video (sampled to 8) for editing / motion reference."}),
-                "video_role": (["auto", "edit source", "motion reference"], {"default": "auto",
-                               "tooltip": "auto: editing without reference pictures, motion reference with them."}),
+                "video_frames": ("IMAGE", {"tooltip": "Frames of a source video for editing / continuation / motion reference. "
+                                                      "Hard cuts are detected and every shot is shown to the model."}),
+                "video_role": (["auto", "edit source", "motion reference", "continuation source"], {"default": "auto",
+                               "tooltip": "auto reads the request: replace/换成/去掉 → edit source, 续拍 → continuation, "
+                                          "参考动作/跟着跳 → motion reference; no keyword → motion with reference pictures, "
+                                          "edit without."}),
+                "video_fps": ("FLOAT", {"default": 24.0, "min": 1.0, "max": 120.0, "step": 0.001,
+                                        "tooltip": "Frame rate of video_frames (times the detected cuts; seconds = 0 uses the source "
+                                                   "length for an edit)."}),
+                "keep_source_audio": ("BOOLEAN", {"default": True,
+                                                  "tooltip": "Edit: the source soundtrack is the final audio (<Audio 1> fully_copy)."}),
+                "source_audio": ("AUDIO", {"tooltip": "Optional source-video audio used to detect silence; when silent/empty, <Audio 1> fully_copy is omitted."}),
             },
         }
 
@@ -246,7 +337,8 @@ class TankPromptOptimizer:
 
     def run(self, backend, template, prompt, thinking_mode, context_length=32768, max_tokens=10240, temperature=0.6,
             top_p=0.95, top_k=40, min_p=0.05, repeat_penalty=1.05, seed=1234, unload_after=True, seconds=0.0,
-            first_frame=None, last_frame=None, video_frames=None, video_role="auto", **kwargs):
+            first_frame=None, last_frame=None, video_frames=None, video_role="auto", video_fps=24.0, keep_source_audio=True,
+            source_audio=None, **kwargs):
         if backend is None or not callable(getattr(backend, "complete", None)):
             raise ValueError("Connect Qwen / Bonsai GGUF Loader · Tank to backend.")
         refs = [kwargs.get(f"reference_image_{i}") for i in range(1, 10)]
@@ -254,31 +346,52 @@ class TankPromptOptimizer:
         sampling = {"temperature": float(temperature), "top_p": float(top_p), "top_k": int(top_k), "min_p": float(min_p),
                     "repeat_penalty": float(repeat_penalty)}
         request = str(prompt or "").strip()
-        tpl = str(template or "")
+        tpl = _expand_template_includes(str(template or ""))
         secs = float(seconds or 0.0)
         started = time.perf_counter()
         try:
             budget = int(max_tokens)
-            # Never lower the thinking effort (quality drops). If the answer ran out of tokens, give it a bigger budget
-            # (and the context to hold it) and try again with the same thinking.
-            for attempt in range(3):
-                configure = getattr(backend, "configure_chat", None)
-                if callable(configure):
-                    configure(max(int(context_length), budget + 8192), thinking_mode)
+            configure = getattr(backend, "configure_chat", None)
+            if callable(configure):
+                configure(max(int(context_length), budget + 8192), thinking_mode)
+            if _h3_optimizer.is_h3_template(tpl):
+                extra_h3 = {"source_audio": source_audio} if source_audio is not None else {}
+                prompt_out, report = _h3_optimizer.run_h3(
+                    backend,
+                    tpl,
+                    request,
+                    seconds=secs,
+                    first_frame=first_frame,
+                    last_frame=last_frame,
+                    references=refs,
+                    video_frames=video_frames,
+                    video_role=video_role,
+                    video_fps=float(video_fps),
+                    keep_source_audio=bool(keep_source_audio),
+                    thinking_mode=thinking_mode,
+                    max_tokens=budget,
+                    seed=int(seed),
+                    sampling=sampling,
+                    **extra_h3,
+                )
+            else:
+                retry_budgets: list[int] = []
                 try:
-                    if tpl.lstrip().startswith(H3_MARKER):
-                        prompt_out, report = self._h3(backend, request, secs, first_frame, last_frame, refs, video_frames,
-                                                      thinking_mode, budget, int(seed), video_role, sampling)
-                    else:
-                        prompt_out, report = self._generic(backend, tpl, request, secs, first_frame, last_frame, refs,
-                                                           video_frames, thinking_mode, budget, int(seed), sampling)
-                    if attempt:
-                        report += "\n" + f"answer needed a bigger budget: max_tokens={budget}"
-                    break
-                except Exception as error:
-                    if attempt == 2 or not re.search(r"budget|final answer|empty", str(error), re.I):
-                        raise
-                    budget = min(32768, int(budget * 1.6))
+                    setattr(backend, "_h3_retry_budgets", retry_budgets)
+                except Exception:
+                    pass
+                try:
+                    prompt_out, report = self._generic(
+                        backend, tpl, request, secs, first_frame, last_frame, refs,
+                        video_frames, thinking_mode, budget, int(seed), sampling,
+                    )
+                    if retry_budgets:
+                        report += "\n" + f"answer needed a bigger budget: max_tokens={retry_budgets[-1]}"
+                finally:
+                    try:
+                        delattr(backend, "_h3_retry_budgets")
+                    except Exception:
+                        pass
         finally:
             if unload_after and callable(getattr(backend, "unload", None)):
                 backend.unload()
@@ -286,29 +399,38 @@ class TankPromptOptimizer:
         print(f"[TankNodes] prompt optimizer: {report.splitlines()[0]} {report.splitlines()[-1]}")
         if not prompt_out.strip():
             prompt_out, report = request, report + "\n" + "empty answer -> original prompt used"
-        return {"ui": {"text": (prompt_out + "\n\n---\n" + report,)}, "result": (prompt_out, report)}
+        analysis_failed = any(
+            ln.strip() == "analysis=failed, generic fallback" or ln.strip().startswith("- analysis_failed:")
+            for ln in report.splitlines()
+        )
+        return {
+            "ui": {
+                "text": (prompt_out + "\n\n---\n" + report,),
+                "tank_prompt_meta": [{"has_report": True, "analysis_failed": analysis_failed}],
+            },
+            "result": (prompt_out, report),
+        }
 
     # -------------------------------------------------------------- H3 official format
-    def _h3(self, backend, request, secs, first, last, refs, video, thinking, max_tokens, seed, video_role, sampling):
-        assets: list[Asset] = []
-        for role, batch in (("first_frame", first), ("last_frame", last)):
-            for urls in _frames_to_urls(batch)[:1]:
-                assets.append(Asset("picture", role, "", urls))
-        for ref in refs:
-            for urls in _frames_to_urls(ref)[:1]:
-                assets.append(Asset("picture", "reference", "", urls))
-        if video is not None:
-            role = {"edit source": "editing", "motion reference": "motion"}.get(video_role, "motion" if refs else "editing")
-            assets.append(Asset("video", role, "", [u[0] for u in _frames_to_urls(video, 8)]))
-        duration = secs if secs > 0 else 5.0
-        result = optimize(backend, Job(request, duration, assets, "auto"), thinking_mode=thinking, max_tokens=max_tokens,
-                          seed=seed, correction=True, sampling=sampling)
-        hard = [i for i in result["issues"] if i["hard"]]
-        secs_text = ("%.2f" % secs) if secs > 0 else "not used (5.00 assumed)"
-        lines = [f"template=H3 mode={result['mode']} references={len(refs)}", "seconds=" + secs_text,
-                 f"corrected={result['corrected']} final_hard_issues={len(hard)}"]
-        lines += [f"- {i['code']}: {i['msg']}" for i in result["issues"]]
-        return result["prompt"], "\n".join(lines)
+    def _h3(self, backend, request, secs, first, last, refs, video, thinking, max_tokens, seed, video_role, sampling,
+            video_fps=24.0, keep_source_audio=True, template=""):
+        return _h3_optimizer.run_h3(
+            backend,
+            template or H3_MARKER,
+            request,
+            seconds=float(secs or 0.0),
+            first_frame=first,
+            last_frame=last,
+            references=refs,
+            video_frames=video,
+            video_role=video_role,
+            video_fps=float(video_fps),
+            keep_source_audio=bool(keep_source_audio),
+            thinking_mode=thinking,
+            max_tokens=int(max_tokens),
+            seed=int(seed),
+            sampling=sampling,
+        )
 
     # -------------------------------------------------------------- any other template
     def _generic(self, backend, tpl, request, secs, first, last, refs, video, thinking, max_tokens, seed, sampling):
@@ -347,82 +469,6 @@ class TankPromptOptimizer:
 QWEN21_PLAIN_OUTPUT = (
     "\n\n---\nOutput format for this workflow: reply with the rewritten prompt text only - exactly what you would put in "
     "rewritten_prompt - with no JSON, no field names, no explanation.\n")
-
-
-class TankQwen21PromptEngineering:
-    """Official Qwen-Image 2.1 prompt-enhancer system prompt (T2I or edit), for Local Multimodal Chat · Tank."""
-    DEPRECATED = True  # use 提示词模板 · Tank instead; kept so old workflows and published cards still run
-
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {"required": {"task": (["text-to-image", "image edit"], {"default": "image edit",
-                                 "tooltip": "Which official Qwen-Image 2.1 prompt enhancer to use."})},
-                "optional": {"extra_rules": ("STRING", {"multiline": True, "default": "",
-                                                        "tooltip": "Optional house rules appended after the official text."})}}
-
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("system_prompt",)
-    FUNCTION = "run"
-    CATEGORY = "TankNodes/Prompt"
-    DESCRIPTION = ("Outputs the official Qwen-Image 2.1 prompt-enhancer instructions (text-to-image or edit). Connect it to "
-                   "Local Multimodal Chat · Tank as the system prompt; the user prompt and pictures go into the chat node.")
-
-    def run(self, task, extra_rules=""):
-        name = "qwen21_t2i_official_pe.txt" if task == "text-to-image" else "qwen21_edit_official_pe.txt"
-        with open(os.path.join(_TEMPLATE_DIR, name), encoding="utf-8") as handle:
-            text = handle.read().rstrip() + QWEN21_PLAIN_OUTPUT
-        extra = str(extra_rules or "").strip()
-        return (text + ("\nAdditional rules:\n" + extra if extra else ""),)
-
-
-class TankMossPromptEngineering:
-    """Official MOSS-Image prompt-enhancer system prompt, for Local Multimodal Chat · Tank."""
-    DEPRECATED = True  # use 提示词模板 · Tank instead; kept so old workflows and published cards still run
-
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {"required": {}, "optional": {"extra_rules": ("STRING", {"multiline": True, "default": "",
-                                                        "tooltip": "Optional house rules appended after the official text."})}}
-
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("system_prompt",)
-    FUNCTION = "run"
-    CATEGORY = "TankNodes/Prompt"
-    DESCRIPTION = ("Outputs the official MOSS-Image prompt-enhancer instructions. Connect it to Local Multimodal Chat · Tank "
-                   "as the system prompt; the user prompt (and optional pictures) go into the chat node.")
-
-    def run(self, extra_rules=""):
-        with open(os.path.join(_TEMPLATE_DIR, "moss_t2i_official.txt"), encoding="utf-8") as handle:
-            text = handle.read().rstrip()
-        extra = str(extra_rules or "").strip()
-        return (text + ("\n\nAdditional rules:\n" + extra if extra else ""),)
-
-
-class TankFlux3PromptEngineering:
-    """Official FLUX 3 Image Klein prompt-upsampler system prompt (text-to-image / image edit), for Local Multimodal Chat · Tank."""
-    DEPRECATED = True  # use 提示词模板 · Tank instead; kept so old workflows and published cards still run
-
-    FILES = {"text-to-image": "flux3_t2i_official_upsampler.txt", "image edit": "flux3_edit_official_upsampler.txt"}
-
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {"required": {"task": (list(cls.FILES), {"default": "text-to-image",
-                                                        "tooltip": "text-to-image or image edit: the two official upsampler prompts."})},
-                "optional": {"extra_rules": ("STRING", {"multiline": True, "default": "",
-                                                        "tooltip": "Optional house rules appended after the official text."})}}
-
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("system_prompt",)
-    FUNCTION = "run"
-    CATEGORY = "TankNodes/Prompt"
-    DESCRIPTION = ("Outputs the official FLUX 3 Image Klein prompt-upsampler instructions. Connect it to Local Multimodal Chat · Tank "
-                   "as the system prompt; the user prompt (and reference pictures for editing) go into the chat node.")
-
-    def run(self, task, extra_rules=""):
-        with open(os.path.join(_TEMPLATE_DIR, self.FILES[task]), encoding="utf-8") as handle:
-            text = handle.read().rstrip()
-        extra = str(extra_rules or "").strip()
-        return (text + ("\n\nAdditional rules:\n" + extra if extra else ""),)
 
 
 class TankImageBatch:

@@ -583,8 +583,13 @@ class OpenAICompatibleBackend:
                 self.last_reasoning_effort = effort
             return
 
+        if host == "api.deepseek.com" or host.endswith(".deepseek.com") or "deepseek" in (self.model or "").lower():
+            extra_body.setdefault("thinking", {"type": "disabled" if choice == "off" else "enabled"})
+            self.last_reasoning_effort = None if choice == "off" else choice
+            return
+
         # Flat reasoning_effort is the most common Chat Completions shape for
-        # OpenAI, DeepSeek, GLM and compatible gateways. Keep it in extra_body
+        # OpenAI, GLM and compatible gateways. Keep it in extra_body
         # so older OpenAI Python SDK versions still pass it through.
         wire_effort = "none" if choice == "off" else choice
         extra_body.setdefault("reasoning_effort", wire_effort)
@@ -650,7 +655,10 @@ class OpenAICompatibleBackend:
             else:
                 yield result
         except Exception as exc:
-            raise BackendError(f"OpenAI-compatible API request failed: {exc}") from exc
+            msg = f"OpenAI-compatible API request failed: {exc}"
+            if self.api_key and self.api_key in msg:
+                raise BackendError(msg.replace(self.api_key, "***")) from None
+            raise BackendError(msg) from exc
         finally:
             # Drop the reference before awaiting close(): the non-stream path cancels
             # this task as soon as its single result arrives, and a cancellation that
@@ -677,12 +685,17 @@ class OpenAICompatibleBackend:
                 async with session.post(endpoint, json=body, headers=headers) as response:
                     if response.status >= 400:
                         detail = (await response.content.read(1000)).decode("utf-8", errors="replace")
+                        if self.api_key and self.api_key in detail:
+                            detail = detail.replace(self.api_key, "***")
                         raise BackendError(f"OpenAI-compatible API returned HTTP {response.status}: {detail}")
                     return await response.json(content_type=None)
         except BackendError:
             raise
         except Exception as exc:
-            raise BackendError(f"OpenAI-compatible API request failed: {exc}") from exc
+            msg = f"OpenAI-compatible API request failed: {exc}"
+            if self.api_key and self.api_key in msg:
+                raise BackendError(msg.replace(self.api_key, "***")) from None
+            raise BackendError(msg) from exc
 
     def info(self) -> str:
         return (

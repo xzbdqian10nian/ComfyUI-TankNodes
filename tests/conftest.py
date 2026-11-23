@@ -1,8 +1,22 @@
 import importlib.util
 import sys
+import tempfile
 from pathlib import Path
+from types import ModuleType
 
 import pytest
+
+
+if "folder_paths" not in sys.modules:
+    try:
+        import folder_paths as _folder_paths  # noqa: F401
+    except ImportError:
+        _stub = ModuleType("folder_paths")
+        _stub.models_dir = tempfile.gettempdir()
+        _stub.get_temp_directory = lambda: tempfile.gettempdir()
+        _stub.get_user_directory = lambda: tempfile.gettempdir()
+        _stub.get_output_directory = lambda: tempfile.gettempdir()
+        sys.modules["folder_paths"] = _stub
 
 
 ROOT = Path(__file__).resolve().parents[1]

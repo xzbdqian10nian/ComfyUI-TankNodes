@@ -1,0 +1,60 @@
+[[tank:h3]]
+[[tank:h3-mv]]
+MiniMax H3 MV Segment Prompt Rules (Ref2VA)
+
+Inputs per segment:
+- segment_duration: segment length in seconds (e.g., 6.00, 7.00, 8.00).
+- lyrics: exact sung lines for this segment (nullable).
+- section: verse, pre-chorus, chorus, bridge, intro, outro, or interlude.
+- persona: one fixed English identity sentence per picture-backed <Subject N>, paired 1-to-1 with <Picture N>.
+- scene: setting description (nullable; if empty, infer a fitting MV setting from customer_request and section).
+- prev_end_scale: final shot scale and angle of the previous segment (nullable).
+- customer_request: user creative direction (two words to a full paragraph).
+
+Rules:
+1. Six-Section Contract: Output ONLY the final Ref2VA prompt in English (keep source language ONLY inside <d>[Language] ...</d> and user-quoted "..." on-screen text), with no preface, notes, or markdown fences, in this exact order:
+subject_definitions:
+summary:
+retention_analysis:
+detailed_description:
+overall_soundscape:
+non_diegetic_music:
+
+2. Self-Contained Segment & Verbatim Persona: Segments generate independently without latent continuity; every prompt MUST restate full character identities, art style, and scene anchors.
+- Picture-backed characters: write "<Subject N> (from <Picture N>): <exact persona verbatim>" in subject_definitions. NEVER alter persona or add poses, expressions, handheld props, or studio backdrops. Omit standalone <Picture N> lines when an image only defines <Subject N>.
+- Text-only performers (extra performers in customer_request with NO reference image): NEVER invent <Picture M> or <Subject M> labels; omit them from subject_definitions and retention_analysis. Describe each directly in summary and detailed_description with a fixed phrase (matching art style + gender/age + hair + outfit + instrument/role + stage zone).
+- Audio: define <Audio 1> in subject_definitions as the original song segment reused as the complete final soundtrack (citing <Subject N> (S1) when singing <d> lines).
+
+3. Summary & Retention Analysis:
+- Begin summary with "[reference generation + audio reuse]" (or "[audio reuse]" if no reference pictures exist), then 2–3 sentences on setting, performers, shot flow, and <Audio 1> sync.
+- In retention_analysis, write one line per defined label with exact markers:
+  - "<Subject N> (appears in [Shot ...]): fully_preserved - preserves identity, hair, outfit, permanent anatomy, and art style from <Picture N>, ignoring static pose, loose props, and plain backdrop."
+  - "<Audio 1>: fully_copy - <Audio 1> is reused 1:1 as the target video's complete final audio track."
+  - Never write speaker IDs (S1) in retention_analysis.
+
+4. Shot Structure & Timestamps:
+- Start detailed_description with 1–2 style, palette, and lighting sentences BEFORE [Shot 1]. Target 350–480 English words in detailed_description.
+- Use 2–3 purposeful shots per 5–8s segment:
+  - [Shot 1] MUST NOT have a timestamp (NEVER write "[Shot 1] At 00:00.000").
+  - Later shots MUST start with "[Shot N] At MM:SS.mmm," (N = 2, 3, ...), strictly increasing and strictly below segment_duration, keeping cuts >= 1.2s from 00:00.000 and >= 1.0s before segment_duration.
+
+5. Cross-Segment Contrast & Dynamic Opening:
+- When prev_end_scale is non-empty, [Shot 1] MUST switch to a clearly different shot scale AND angle from prev_end_scale (e.g., Close-Up front -> Low-Angle Wide 45-degree side; Wide Shot -> Medium Close-Up).
+- [Shot 1] MUST open mid-action (stepping forward, strumming, raising a mic, hair/skirt moving). NEVER start with a static reference pose or white backdrop.
+
+6. Request Fidelity & Expansion:
+- Preserve EVERY concrete detail from customer_request and scene (locations, props, actions, instruments, text-only bandmates, mood). Never quote signage unless in customer_request.
+- Expand even a two-word customer_request into explicit framing, action, H3 camera motion (Push In, Pull Out, Pan Left/Right, Truck Left/Right, Tilt Up/Down, Pedestal Up/Down, Arc Shot, Tracking Shot, Static Shot + "with small/large amplitude" + "at slow/fast speed"), lighting choreography, and VFX.
+
+7. Section Pacing & Group Blocking:
+- intro / interlude / outro: wide, environmental, or instrument-detail shots, smooth camera travel, rhythmic lights.
+- verse: 2 measured shots, controlled Push In / Truck / Pan (with small amplitude at slow speed), expressive vocal framing, subtle light shifts.
+- pre-chorus: rising Pedestal Up / Tilt Up / Push In, building gestures, pulsing backlights.
+- chorus: 2–3 beat-synced cuts, energetic Push In / Arc Shot / Tracking Shot (with large amplitude or at fast speed), strobes, lasers, cold sparks, or particles.
+- bridge: contrasting angle and moody lighting shift before the climax.
+- Multi-performer blocking: assign fixed zones (center-front, stage-left, stage-right, rear-center riser) and active interaction (eye contact, shoulder lean, synced downbeat nods).
+
+8. Lyrics, Speakers, and Audio Fields:
+- Non-empty lyrics: copy EVERY character verbatim inside <d>[Chinese] ...</d> (or matching language tag) — never translate, paraphrase, drop repeats, or invent words. Attach (S1) (and (S2) if duet/group) with a brief voice-timbre phrase to the singer, favor Medium Close-Up / Close-Up for lip-sync, and leave ~0.25s per Chinese character (placing consecutive lyric phrases across consecutive shots in order, or marking mid-phrase cuts with <scenetrans> on both sides).
+- Empty lyrics: NEVER output <d>...</d> or (Sx), and NEVER invent lyrics; show instrumental play or expressive singing synced to <Audio 1>.
+- overall_soundscape: 1–2 sentences stating the vocal and performance audio from <Audio 1> plays cleanly throughout without added competing sound effects (no <d>, no N/A). non_diegetic_music: 1 sentence stating <Audio 1> is reused 1:1 as the complete original song track synced to the cuts, unchanged.

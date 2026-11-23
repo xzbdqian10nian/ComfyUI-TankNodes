@@ -1,15 +1,22 @@
-"""TankNodes: local multimodal models and OpenAI-compatible API tools."""
+"""TankNodes: local multimodal models, prompt workflows, manga/camera utilities, and OpenAI-compatible API tools."""
 
 from .api_nodes import VisionAPIDirect, VisionAPIEnv
 from .local_nodes import Qwen38VLLoader, VisionChat, VisionUnload
 from .text_nodes import TankTextSplit
-from .moss_nodes import TankMangaTranslatePrompt, TankMossSwapTextLayout, TankMangaCharacterPrompt, TankMossColorizeLayout
+from .manga import (
+    TankMangaCharacterPrompt,
+    TankMangaTranslatePrompt,
+    TankMossColorizeLayout,
+    TankMossSwapTextLayout,
+)
 from .h3_optimizer import TankH3PromptOptimizer
-from .prompt_nodes import (TankFlux3PromptEngineering, TankImageBatch, TankMossPromptEngineering, TankOptionalImageDownscale, TankPromptOptimizer,
-                           TankPromptTemplate,
-                           TankQwen21PromptEngineering)
-
-from .prompt_nodes import _register_template_routes
+from .prompt_nodes import (
+    TankImageBatch,
+    TankOptionalImageDownscale,
+    TankPromptOptimizer,
+    TankPromptTemplate,
+    _register_template_routes,
+)
 
 _register_template_routes()
 
@@ -25,9 +32,6 @@ NODE_CLASS_MAPPINGS = {
     "TankPromptTemplate": TankPromptTemplate,
     "TankPromptOptimizer": TankPromptOptimizer,
     "TankImageBatch": TankImageBatch,
-    "TankQwen21PromptEngineering": TankQwen21PromptEngineering,
-    "TankMossPromptEngineering": TankMossPromptEngineering,
-    "TankFlux3PromptEngineering": TankFlux3PromptEngineering,
     "TankOptionalImageDownscale": TankOptionalImageDownscale,
     "TankMangaTranslatePrompt": TankMangaTranslatePrompt,
     "TankMossSwapTextLayout": TankMossSwapTextLayout,
@@ -46,9 +50,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "TankPromptTemplate": "Prompt Template · Tank",
     "TankPromptOptimizer": "Prompt Optimizer · Tank",
     "TankImageBatch": "Image Batch (optional inputs) · Tank",
-    "TankQwen21PromptEngineering": "Qwen-Image 2.1 Prompt Engineering · Tank",
-    "TankMossPromptEngineering": "MOSS-Image Prompt Engineering · Tank",
-    "TankFlux3PromptEngineering": "FLUX 3 Klein Prompt Engineering · Tank",
     "TankOptionalImageDownscale": "Reference Image Resize (optional input) · Tank",
     "TankMangaTranslatePrompt": "Manga Translate Prompt (VL) · Tank",
     "TankMossSwapTextLayout": "MOSS Swap-Text Layout · Tank",
@@ -56,6 +57,38 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "TankMossColorizeLayout": "MOSS Per-Character Colorize Layout · Tank",
 }
 
+from .h3_image_prompt import (
+    NODE_CLASS_MAPPINGS as _H3_IMAGE_NODES,
+    NODE_DISPLAY_NAME_MAPPINGS as _H3_IMAGE_NAMES,
+)
+
+NODE_CLASS_MAPPINGS.update(_H3_IMAGE_NODES)
+NODE_DISPLAY_NAME_MAPPINGS.update(_H3_IMAGE_NAMES)
+
+from .camera360 import (
+    NODE_CLASS_MAPPINGS as _CAMERA_360_NODES,
+    NODE_DISPLAY_NAME_MAPPINGS as _CAMERA_360_NAMES,
+)
+
+NODE_CLASS_MAPPINGS.update(_CAMERA_360_NODES)
+NODE_DISPLAY_NAME_MAPPINGS.update(_CAMERA_360_NAMES)
+
+from .image_size_nodes import (
+    NODE_CLASS_MAPPINGS as _IMAGE_SIZE_NODES,
+    NODE_DISPLAY_NAME_MAPPINGS as _IMAGE_SIZE_NAMES,
+)
+
+NODE_CLASS_MAPPINGS.update(_IMAGE_SIZE_NODES)
+NODE_DISPLAY_NAME_MAPPINGS.update(_IMAGE_SIZE_NAMES)
+
 WEB_DIRECTORY = "./web"
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS", "WEB_DIRECTORY"]
+
+from .h3_long_video import (
+    NODE_CLASS_MAPPINGS as _H3_LONG_VIDEO_NODES,
+    NODE_DISPLAY_NAME_MAPPINGS as _H3_LONG_VIDEO_NAMES,
+)
+
+NODE_CLASS_MAPPINGS.update(_H3_LONG_VIDEO_NODES)
+NODE_DISPLAY_NAME_MAPPINGS.update(_H3_LONG_VIDEO_NAMES)

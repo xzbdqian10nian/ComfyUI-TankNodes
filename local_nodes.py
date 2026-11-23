@@ -209,7 +209,6 @@ class VisionChat:
     FUNCTION = "generate"
     CATEGORY = "TankNodes/Local"
     DESCRIPTION = "Ask a local model about text, images or video. Each run is a separate request with no saved conversation."
-    OUTPUT_NODE = True
 
     def generate(
         self,

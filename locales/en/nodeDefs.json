@@ -65,7 +65,7 @@
       },
       "max_tokens": {
         "name": "max output tokens",
-        "tooltip": "Maximum output token count. 0 omits this parameter and uses the provider default."
+        "tooltip": "Maximum output token count. 0 = no limit, decided by the provider (omits max_tokens)."
       },
       "temperature": {
         "name": "temperature",
@@ -98,6 +98,26 @@
       "video": {
         "name": "video",
         "tooltip": "ComfyUI VIDEO input; use frames for broad support or video_url only when the provider supports native video."
+      },
+      "seconds": {
+        "name": "seconds (H3)",
+        "tooltip": "H3 templates only: target duration in seconds. 0 uses the source video length for edits (or 5.0s default)."
+      },
+      "video_role": {
+        "name": "video role (H3)",
+        "tooltip": "H3 templates only: how the source video is used (auto, edit source, motion reference, continuation source)."
+      },
+      "video_fps": {
+        "name": "video fps (H3)",
+        "tooltip": "H3 templates only: frame rate of video frames / video for hard-cut timing and duration."
+      },
+      "keep_source_audio": {
+        "name": "keep source audio (H3)",
+        "tooltip": "H3 templates only: keep the source soundtrack as <Audio 1> fully_copy for edits."
+      },
+      "source_audio": {
+        "name": "source audio (H3)",
+        "tooltip": "H3 templates only: optional source audio used to detect silence; when silent/empty, <Audio 1> fully_copy is omitted."
       }
     },
     "outputs": {
@@ -149,7 +169,7 @@
       },
       "max_tokens": {
         "name": "max output tokens",
-        "tooltip": "Maximum output token count. 0 omits this parameter and uses the provider default."
+        "tooltip": "Maximum output token count. 0 = no limit, decided by the provider (omits max_tokens)."
       },
       "temperature": {
         "name": "temperature",
@@ -182,6 +202,26 @@
       "video": {
         "name": "video",
         "tooltip": "ComfyUI VIDEO input; use frames for broad support or video_url only when the provider supports native video."
+      },
+      "seconds": {
+        "name": "seconds (H3)",
+        "tooltip": "H3 templates only: target duration in seconds. 0 uses the source video length for edits (or 5.0s default)."
+      },
+      "video_role": {
+        "name": "video role (H3)",
+        "tooltip": "H3 templates only: how the source video is used (auto, edit source, motion reference, continuation source)."
+      },
+      "video_fps": {
+        "name": "video fps (H3)",
+        "tooltip": "H3 templates only: frame rate of video frames / video for hard-cut timing and duration."
+      },
+      "keep_source_audio": {
+        "name": "keep source audio (H3)",
+        "tooltip": "H3 templates only: keep the source soundtrack as <Audio 1> fully_copy for edits."
+      },
+      "source_audio": {
+        "name": "source audio (H3)",
+        "tooltip": "H3 templates only: optional source audio used to detect silence; when silent/empty, <Audio 1> fully_copy is omitted."
       }
     },
     "outputs": {
@@ -453,7 +493,7 @@
       },
       "source_video_role": {
         "name": "source video role",
-        "tooltip": "How the source video is used."
+        "tooltip": "How the source video is used. auto decides from the request text."
       },
       "reference_audio_note": {
         "name": "reference audio note",
@@ -466,6 +506,18 @@
       "context_length": {
         "name": "context length",
         "tooltip": "The official guide plus pictures need about 16-32K tokens."
+      },
+      "source_video_fps": {
+        "name": "source video fps",
+        "tooltip": "Frame rate of the source video frames, used to time the detected hard cuts."
+      },
+      "keep_source_audio": {
+        "name": "keep source audio",
+        "tooltip": "Video edit: the source soundtrack is the final audio (<Audio 1> fully_copy)."
+      },
+      "source_audio": {
+        "name": "source audio",
+        "tooltip": "Optional source audio used to detect silence; when silent/empty, <Audio 1> fully_copy is omitted."
       }
     },
     "outputs": {
@@ -612,11 +664,23 @@
       },
       "video_frames": {
         "name": "video frames",
-        "tooltip": "Source video frames (8 are sampled) for editing or motion reference."
+        "tooltip": "Frames of a source video for editing / continuation / motion reference. Hard cuts are detected and every shot is shown to the model."
       },
       "video_role": {
         "name": "video role",
-        "tooltip": "auto: edit source without reference pictures, motion reference with them."
+        "tooltip": "auto reads the request: replace/swap/remove → edit source, continue → continuation, follow the motion → motion reference; no keyword → motion with reference pictures, edit without."
+      },
+      "video_fps": {
+        "name": "video fps",
+        "tooltip": "Frame rate of video frames (times the detected cuts; seconds = 0 uses the source length for an edit)."
+      },
+      "keep_source_audio": {
+        "name": "keep source audio",
+        "tooltip": "Edit: the source soundtrack is the final audio (<Audio 1> fully_copy)."
+      },
+      "source_audio": {
+        "name": "source audio",
+        "tooltip": "Optional source audio used to detect silence; when silent/empty, <Audio 1> fully_copy is omitted."
       }
     },
     "outputs": {
@@ -675,40 +739,6 @@
       }
     }
   },
-  "TankQwen21PromptEngineering": {
-    "display_name": "Qwen-Image 2.1 Prompt Engineering · Tank",
-    "description": "Official Qwen-Image 2.1 prompt-enhancer system prompt for Local Multimodal Chat · Tank.",
-    "inputs": {
-      "task": {
-        "name": "task",
-        "tooltip": "text-to-image or image edit: the two official PE rule sets."
-      },
-      "extra_rules": {
-        "name": "extra rules",
-        "tooltip": "Optional, appended after the official text."
-      }
-    },
-    "outputs": {
-      "0": {
-        "name": "system prompt"
-      }
-    }
-  },
-  "TankMossPromptEngineering": {
-    "display_name": "MOSS-Image Prompt Engineering · Tank",
-    "description": "Official MOSS-Image prompt-enhancer system prompt for Local Multimodal Chat · Tank.",
-    "inputs": {
-      "extra_rules": {
-        "name": "extra rules",
-        "tooltip": "Optional, appended after the official text."
-      }
-    },
-    "outputs": {
-      "0": {
-        "name": "system prompt"
-      }
-    }
-  },
   "TankOptionalImageDownscale": {
     "display_name": "Reference Image Resize (optional input) · Tank",
     "description": "Resizes a picture to about N megapixels (shrink only by default); outputs nothing when no picture is connected, so optional reference inputs downstream are simply skipped.",
@@ -746,22 +776,757 @@
       }
     }
   },
-  "TankFlux3PromptEngineering": {
-    "display_name": "FLUX 3 Klein Prompt Engineering · Tank",
-    "description": "Official FLUX 3 Image Klein prompt-upsampler system prompt for Local Multimodal Chat · Tank.",
+  "TankMangaTranslatePrompt": {
+    "display_name": "Manga Translate Prompt (VL) · Tank",
+    "description": "Builds system and user prompts for manga balloon detection and translation.",
     "inputs": {
-      "task": {
-        "name": "task",
-        "tooltip": "text-to-image or image edit: the two official upsampler prompts."
+      "language": {
+        "name": "Target language"
       },
-      "extra_rules": {
-        "name": "extra rules",
-        "tooltip": "Optional, appended after the official text."
+      "notes": {
+        "name": "Translation notes"
       }
     },
     "outputs": {
       "0": {
-        "name": "system prompt"
+        "name": "System prompt"
+      },
+      "1": {
+        "name": "User prompt"
+      }
+    }
+  },
+  "TankMossSwapTextLayout": {
+    "display_name": "MOSS Swap-Text Layout · Tank",
+    "description": "Converts VL balloon detections into MOSS swap_text layout JSON.",
+    "inputs": {
+      "image": {
+        "name": "Image"
+      },
+      "detections": {
+        "name": "Detections"
+      },
+      "resolution": {
+        "name": "Resolution"
+      },
+      "coord_mode": {
+        "name": "Coord mode"
+      },
+      "uppercase_english": {
+        "name": "Uppercase English"
+      },
+      "min_box": {
+        "name": "Min box"
+      },
+      "merge_columns": {
+        "name": "Merge columns"
+      },
+      "chinese_line_breaks": {
+        "name": "Chinese line breaks"
+      },
+      "text_box": {
+        "name": "Text box mode"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "Layout JSON"
+      },
+      "1": {
+        "name": "Preview"
+      },
+      "2": {
+        "name": "Lines"
+      }
+    }
+  },
+  "TankMangaCharacterPrompt": {
+    "display_name": "Manga Character Finder Prompt (VL) · Tank",
+    "description": "Builds VL prompts to locate characters on a manga page.",
+    "inputs": {
+      "character_sheet": {
+        "name": "Character sheet"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "System prompt"
+      },
+      "1": {
+        "name": "User prompt"
+      },
+      "2": {
+        "name": "Character sheet"
+      }
+    }
+  },
+  "TankMossColorizeLayout": {
+    "display_name": "MOSS Per-Character Colorize Layout · Tank",
+    "description": "Converts character detections into MOSS per-character colorize layout JSON.",
+    "inputs": {
+      "image": {
+        "name": "Image"
+      },
+      "detections": {
+        "name": "Detections"
+      },
+      "character_sheet": {
+        "name": "Character sheet"
+      },
+      "base_caption": {
+        "name": "Base caption"
+      },
+      "resolution": {
+        "name": "Resolution"
+      },
+      "add_position": {
+        "name": "Add position"
+      },
+      "add_bbox": {
+        "name": "Add bbox"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "Layout JSON"
+      },
+      "1": {
+        "name": "Preview"
+      },
+      "2": {
+        "name": "Report"
+      }
+    }
+  },
+  "TankH3ImagePromptOptimizer": {
+    "display_name": "H3 Image Official Prompt Optimizer · Tank",
+    "description": "Official H3 Image local multimodal prompt optimizer.",
+    "inputs": {
+      "backend": {
+        "name": "Backend",
+        "tooltip": "Connect a Bonsai / Tank local backend; it is not loaded when optimization is off."
+      },
+      "template": {
+        "name": "Template",
+        "tooltip": "Connect the official H3 Image template, separate from video templates."
+      },
+      "request": {
+        "name": "Request",
+        "tooltip": "Original image-generation or editing request; preserve visible text and quotations."
+      },
+      "enabled": {
+        "name": "Enabled",
+        "tooltip": "When off, pass through the request without calling or unloading the backend."
+      },
+      "thinking_mode": {
+        "name": "Thinking mode",
+        "tooltip": "Use high reasoning effort without automatic downgrades."
+      },
+      "context_length": {
+        "name": "Context length",
+        "tooltip": "16384 is recommended for text-to-image; multi-image editing requires at least 32768."
+      },
+      "max_tokens": {
+        "name": "Max tokens",
+        "tooltip": "Includes reasoning and the final answer; use 4096 for text-to-image and at least 10240 for editing."
+      },
+      "correction": {
+        "name": "Correction",
+        "tooltip": "Retry once on an invalid response format. Off by default; does not check image semantics."
+      },
+      "unload_after": {
+        "name": "Unload after",
+        "tooltip": "Unload the language model after success or failure to release VRAM for image generation."
+      },
+      "seed": {
+        "name": "Seed",
+        "tooltip": "Controls prompt-optimization randomness, not the image sampler seed."
+      },
+      "aspect_ratio": {
+        "name": "Aspect ratio",
+        "tooltip": "Shared aspect-ratio string; an explicit ratio takes priority over automatic recommendations."
+      },
+      "reference_image_1": {
+        "name": "Reference image 1",
+        "tooltip": "Original reference image 1; use the first batch item and number connected ports consecutively."
+      },
+      "reference_image_2": {
+        "name": "Reference image 2",
+        "tooltip": "Original reference image 2; use the first batch item and number connected ports consecutively."
+      },
+      "reference_image_3": {
+        "name": "Reference image 3",
+        "tooltip": "Original reference image 3; use the first batch item and number connected ports consecutively."
+      },
+      "reference_image_4": {
+        "name": "Reference image 4",
+        "tooltip": "Original reference image 4; use the first batch item and number connected ports consecutively."
+      },
+      "reference_image_5": {
+        "name": "Reference image 5",
+        "tooltip": "Original reference image 5; use the first batch item and number connected ports consecutively."
+      },
+      "reference_image_6": {
+        "name": "Reference image 6",
+        "tooltip": "Original reference image 6; use the first batch item and number connected ports consecutively."
+      },
+      "reference_image_7": {
+        "name": "Reference image 7",
+        "tooltip": "Original reference image 7; use the first batch item and number connected ports consecutively."
+      },
+      "reference_image_8": {
+        "name": "Reference image 8",
+        "tooltip": "Original reference image 8; use the first batch item and number connected ports consecutively."
+      },
+      "reference_image_9": {
+        "name": "Reference image 9",
+        "tooltip": "Original reference image 9; use the first batch item and number connected ports consecutively."
+      },
+      "reference_image_10": {
+        "name": "Reference image 10",
+        "tooltip": "Original reference image 10; use the first batch item and number connected ports consecutively."
+      },
+      "reference_image_11": {
+        "name": "Reference image 11",
+        "tooltip": "Original reference image 11; use the first batch item and number connected ports consecutively."
+      },
+      "reference_image_12": {
+        "name": "Reference image 12",
+        "tooltip": "Original reference image 12; use the first batch item and number connected ports consecutively."
+      },
+      "reference_image_13": {
+        "name": "Reference image 13",
+        "tooltip": "Original reference image 13; use the first batch item and number connected ports consecutively."
+      },
+      "reference_image_14": {
+        "name": "Reference image 14",
+        "tooltip": "Original reference image 14; use the first batch item and number connected ports consecutively."
+      },
+      "reference_image_15": {
+        "name": "Reference image 15",
+        "tooltip": "Original reference image 15; use the first batch item and number connected ports consecutively."
+      },
+      "reference_image_16": {
+        "name": "Reference image 16",
+        "tooltip": "Original reference image 16; use the first batch item and number connected ports consecutively."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "Expanded caption",
+        "tooltip": "Expanded caption text for the image prompt, without a JSON wrapper."
+      },
+      "1": {
+        "name": "Recommended ratio",
+        "tooltip": "Model-suggested ratio; never overrides an explicit canvas ratio."
+      },
+      "2": {
+        "name": "Report JSON",
+        "tooltip": "Raw responses, image numbering, usage, timing and whether optimization ran."
+      }
+    }
+  },
+  "TankH3ImageSize": {
+    "display_name": "H3 Image Size · Tank",
+    "description": "Computes aligned width and height from aspect ratio and megapixels.",
+    "inputs": {
+      "aspect_ratio": {
+        "name": "Aspect ratio",
+        "tooltip": "Explicit ratios take priority. Auto uses the optimizer recommendation, then the reference image, then 1:1."
+      },
+      "megapixels": {
+        "name": "Megapixels",
+        "tooltip": "Area is MP × 1024² pixels; round each side to the nearest multiple of 32."
+      },
+      "recommended_ratio": {
+        "name": "Recommended ratio",
+        "tooltip": "Optimizer-suggested ratio; ignored when an explicit ratio or image-following mode is selected."
+      },
+      "image": {
+        "name": "Reference image",
+        "tooltip": "Read the original image dimensions for its ratio without resizing it."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "Width",
+        "tooltip": "Output width in pixels, aligned to a multiple of 32."
+      },
+      "1": {
+        "name": "Height",
+        "tooltip": "Output height in pixels, aligned to a multiple of 32."
+      },
+      "2": {
+        "name": "Actual ratio",
+        "tooltip": "Reduced width-to-height ratio after alignment."
+      }
+    }
+  },
+  "TankH3ImageAspect": {
+    "display_name": "H3 Image Aspect Ratio · Tank",
+    "description": "Shared aspect ratio selector outputting STRING.",
+    "inputs": {
+      "ratio": {
+        "name": "Ratio",
+        "tooltip": "Connect the same ratio string to the optimizer and size node to keep them consistent."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "Aspect ratio",
+        "tooltip": "Selected aspect-ratio string for STRING inputs, not a combo index."
+      }
+    }
+  },
+  "TankMultiAngleCamera": {
+    "display_name": "3D Multi-Angle Camera · Tank",
+    "description": "Interactive Three.js 3D camera stage with 10 presets and V6 / QMA / SKS multi-model prompt dialects.",
+    "inputs": {
+      "horizontal_angle": {
+        "name": "Horizontal azimuth (°)",
+        "tooltip": "0° = original camera, 90° = right side, 180° = reverse shot, 270° = left side."
+      },
+      "vertical_angle": {
+        "name": "Vertical pitch (°)",
+        "tooltip": "-30° low-angle up to +90° pure top-down overhead."
+      },
+      "shot_scale": {
+        "name": "Shot scale",
+        "tooltip": "wide (24mm) to close_up (85mm)."
+      },
+      "prompt_dialect": {
+        "name": "Prompt dialect",
+        "tooltip": "structured_v6 for H3 Image (+PE) / GPT-Image; qma_lora for Qwen2.1 QMA LoRA; sks_lora for <sks> LoRAs."
+      },
+      "reference_image": {
+        "name": "Reference image",
+        "tooltip": "Optional reference photo displayed on the 3D center card and passed through."
+      },
+      "extra_style_hint": {
+        "name": "Extra hint",
+        "tooltip": "Optional additional scene or style instruction."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "Positive prompt",
+        "tooltip": "View-change instructions compiled from the camera pose and prompt dialect."
+      },
+      "1": {
+        "name": "Negative prompt",
+        "tooltip": "Negative description discouraging common viewpoint and composition errors."
+      },
+      "2": {
+        "name": "Camera JSON",
+        "tooltip": "Structured azimuth, pitch, shot scale and prompt-dialect settings."
+      },
+      "3": {
+        "name": "Passthrough image",
+        "tooltip": "Original reference image, or a blank placeholder when no image is connected."
+      }
+    }
+  },
+  "TankPanoramaSetup": {
+    "display_name": "360 Panorama Setup · Tank",
+    "description": "All-in-one 360° equirectangular setup: dual-mode prompt (direct/extension), strict 2:1 dimensions, and 21% narrow-FOV canvas + cosine mask.",
+    "inputs": {
+      "mode": {
+        "name": "Mode",
+        "tooltip": "auto = direct when no image is connected, extension when reference_image is connected."
+      },
+      "dialect": {
+        "name": "Prompt dialect",
+        "tooltip": "structured_equirect, concise_qwen_edit, or flux_skybox_lora."
+      },
+      "pano_width": {
+        "name": "Panorama width",
+        "tooltip": "Output width (snapped to 64); height is strictly width / 2 (e.g. 2880x1440 for H3 Image)."
+      },
+      "indoor_anti_stretch": {
+        "name": "Indoor 2.8m clearance",
+        "tooltip": "Enforces a clear 2.8-3.5m floor radius around the camera to prevent foreground furniture stretching."
+      },
+      "anchor_width_ratio": {
+        "name": "Center anchor ratio",
+        "tooltip": "Fraction of 360° equator occupied by the reference photo (0.21 ≈ 70° HFOV)."
+      },
+      "feather_px": {
+        "name": "Feather (px)",
+        "tooltip": "Cosine feather width at the anchor border."
+      },
+      "scene_prompt": {
+        "name": "Scene prompt",
+        "tooltip": "Scene description for text-to-panorama or optional context for image-to-panorama."
+      },
+      "reference_image": {
+        "name": "Reference image",
+        "tooltip": "Optional single reference photo for image-to-360° outpainting."
+      },
+      "lora_trigger": {
+        "name": "LoRA trigger",
+        "tooltip": "Trigger phrase when using flux_skybox_lora dialect."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "Positive prompt",
+        "tooltip": "Scene and spherical-geometry instructions for direct generation or reference-image extension."
+      },
+      "1": {
+        "name": "Negative prompt",
+        "tooltip": "Negative description discouraging repeated scenery, seams and stretching."
+      },
+      "2": {
+        "name": "Width (2:1)",
+        "tooltip": "Panorama width in pixels, aligned to a multiple of 64."
+      },
+      "3": {
+        "name": "Height (2:1)",
+        "tooltip": "Panorama height, exactly half of the output width."
+      },
+      "4": {
+        "name": "Padded 21% canvas",
+        "tooltip": "Panorama canvas with the centered reference image; its width fraction follows the anchor ratio."
+      },
+      "5": {
+        "name": "Outpaint mask",
+        "tooltip": "White marks areas to generate, with a feathered transition around the reference image."
+      }
+    }
+  },
+  "TankPanoramaSeamlessPatch": {
+    "display_name": "360 Panorama Seamless Patch · Tank",
+    "description": "Asymmetric X-axis circular + Y-axis replicate Conv2d padding patch for 180° seam-free 360° panoramas (Dynamic VRAM compatible).",
+    "inputs": {
+      "model": {
+        "name": "Model",
+        "tooltip": "Diffusion model to sample with horizontal wrapping; the original model object is preserved."
+      },
+      "enable": {
+        "name": "Enable",
+        "tooltip": "Enable horizontal circular padding and vertical edge replication; when off, pass inputs through unchanged."
+      },
+      "vae": {
+        "name": "VAE",
+        "tooltip": "Optional VAE to receive the same horizontal seamless-convolution patch."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "Model",
+        "tooltip": "Model with horizontal wrapping, or the original model when disabled."
+      },
+      "1": {
+        "name": "VAE",
+        "tooltip": "Patched VAE, or empty when no VAE is connected."
+      }
+    }
+  },
+  "TankPanoramaViewer": {
+    "display_name": "360 Panorama Viewer & Slicer · Tank",
+    "description": "Embedded Three.js 360°×180° interactive sphere viewer plus distortion-free rectilinear multi-view slicer (golden 58° VFOV).",
+    "inputs": {
+      "equirect_image": {
+        "name": "Equirectangular 2:1 image",
+        "tooltip": "A 2:1 equirectangular panorama for spherical viewing and perspective slicing."
+      },
+      "default_vfov": {
+        "name": "Viewer initial VFOV (°)",
+        "tooltip": "Initial vertical field of view in the viewer; does not change the slice field of view."
+      },
+      "slice_preset": {
+        "name": "Slice preset",
+        "tooltip": "4_cardinal_views (0/90/180/270°), 12_orbit_views, single_custom_view, or none."
+      },
+      "slice_vfov": {
+        "name": "Slice VFOV (°)",
+        "tooltip": "Golden 58° prevents wide-angle corner stretching."
+      },
+      "slice_width": {
+        "name": "Slice width",
+        "tooltip": "Output width of each perspective view, in pixels."
+      },
+      "slice_height": {
+        "name": "Slice height",
+        "tooltip": "Output height of each perspective view, in pixels."
+      },
+      "custom_yaw_deg": {
+        "name": "Custom yaw (°)",
+        "tooltip": "Horizontal direction for a custom view; 0° faces the panorama center, 180° faces the rear seam."
+      },
+      "custom_pitch_deg": {
+        "name": "Custom pitch (°)",
+        "tooltip": "Vertical direction for a custom view; positive looks up and negative looks down."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "Equirectangular image",
+        "tooltip": "Original input panorama, passed through without slicing or resampling."
+      },
+      "1": {
+        "name": "Sliced perspective views",
+        "tooltip": "Batch of rectilinear views at the selected poses; returns the original image when slicing is disabled."
+      }
+    }
+  },
+  "TankImageSize": {
+    "display_name": "Image Size (Ratio · Megapixels) · Tank",
+    "description": "Create an empty latent from aspect ratio (or optional image 1) and area, with width, height and pixel-count outputs. For H3 Image, use width and height and keep its conditioning node.",
+    "inputs": {
+      "aspect_ratio": {
+        "name": "Aspect Ratio",
+        "tooltip": "Target width-to-height ratio, or 跟随图像1 to follow optional image 1. Alignment may slightly change the final ratio."
+      },
+      "megapixels": {
+        "name": "Megapixels",
+        "tooltip": "Target pixel area: 1M = 1024 squared pixels. The preview shows the aligned size."
+      },
+      "multiple": {
+        "name": "Alignment",
+        "tooltip": "Round width and height to multiples of this number; this does not multiply the size. Recommended: 32."
+      },
+      "batch_size": {
+        "name": "Batch Size",
+        "tooltip": "Number of empty latent images. Larger areas and batches use more VRAM."
+      },
+      "image": {
+        "name": "Image",
+        "tooltip": "Optional reference image 1 used when Aspect Ratio is set to 跟随图像1."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "Latent",
+        "tooltip": "Generic zero latent for standard samplers. Do not replace editing, masked, or H3 Image conditioning latents."
+      },
+      "1": {
+        "name": "Width",
+        "tooltip": "Aligned image width in pixels."
+      },
+      "2": {
+        "name": "Height",
+        "tooltip": "Aligned image height in pixels."
+      },
+      "3": {
+        "name": "Pixels",
+        "tooltip": "Actual pixel count per image: width times height."
+      },
+      "4": {
+        "name": "Actual MP",
+        "tooltip": "Actual aligned area in MP, using 1024 squared pixels per MP."
+      }
+    }
+  },
+  "TankH3WindowPlan": {
+    "display_name": "H3 Window Plan · Tank",
+    "description": "Calculates a valid MiniMax H3 long-video frame total, context overlap, and window starts.",
+    "inputs": {
+      "frames_needed": {
+        "name": "Frames needed",
+        "tooltip": "Requested output frames; H3 pads to 17n+5."
+      },
+      "context_length": {
+        "name": "Context length",
+        "tooltip": "H3 context window length in frames; must be 17n+5."
+      },
+      "overlap_candidates": {
+        "name": "Overlap candidates",
+        "tooltip": "Comma-separated overlap candidates in frames, tried in order."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "Total frames",
+        "tooltip": "Padded H3 total frame count."
+      },
+      "1": {
+        "name": "Context length",
+        "tooltip": "Context length to connect to MiniMaxH3ContextWindows."
+      },
+      "2": {
+        "name": "Context overlap",
+        "tooltip": "Selected overlap to connect to MiniMaxH3ContextWindows."
+      },
+      "3": {
+        "name": "Window starts",
+        "tooltip": "JSON array of pixel-frame window starts."
+      },
+      "4": {
+        "name": "Plan JSON",
+        "tooltip": "Complete plan including padding and window count."
+      }
+    }
+  },
+  "TankH3WindowedReferenceToVideo": {
+    "display_name": "H3 Windowed Reference to Video · Tank",
+    "description": "Encodes one H3 reference condition per window. Connect the overlap output to MiniMaxH3ContextWindows, share context_length via H3 Window Plan, and enable split_conds_to_windows=True. When Split conditions is off, disable that downstream switch too. Crop to frames_needed with ImageFromBatch.",
+    "inputs": {
+      "clip": {
+        "name": "CLIP",
+        "tooltip": "MiniMax H3 CLIP."
+      },
+      "vae": {
+        "name": "Video VAE",
+        "tooltip": "MiniMax H3 video VAE."
+      },
+      "audio_vae": {
+        "name": "Audio VAE",
+        "tooltip": "MiniMax H3 audio VAE."
+      },
+      "width": {
+        "name": "Width",
+        "tooltip": "Output width in pixels."
+      },
+      "height": {
+        "name": "Height",
+        "tooltip": "Output height in pixels."
+      },
+      "frames_needed": {
+        "name": "Frames needed",
+        "tooltip": "Requested frames before H3 padding."
+      },
+      "context_length": {
+        "name": "Context length",
+        "tooltip": "H3 context length in frames."
+      },
+      "prompt": {
+        "name": "Prompt",
+        "tooltip": "Reference or video-editing prompt."
+      },
+      "ref_image_size": {
+        "name": "Reference image size",
+        "tooltip": "Match the output or fit the short edge."
+      },
+      "source_video": {
+        "name": "Source video",
+        "tooltip": "Optional source frames; each window supplies its slice as <Video 1>."
+      },
+      "image_1": {
+        "name": "Picture 1",
+        "tooltip": "Optional <Picture 1> reference image."
+      },
+      "image_2": {
+        "name": "Picture 2",
+        "tooltip": "Optional <Picture 2> reference image."
+      },
+      "image_3": {
+        "name": "Picture 3",
+        "tooltip": "Optional <Picture 3> reference image."
+      },
+      "image_4": {
+        "name": "Picture 4",
+        "tooltip": "Optional <Picture 4> reference image."
+      },
+      "image_5": {
+        "name": "Picture 5",
+        "tooltip": "Optional <Picture 5> reference image."
+      },
+      "image_6": {
+        "name": "Picture 6",
+        "tooltip": "Optional <Picture 6> reference image."
+      },
+      "image_7": {
+        "name": "Picture 7",
+        "tooltip": "Optional <Picture 7> reference image."
+      },
+      "image_8": {
+        "name": "Picture 8",
+        "tooltip": "Optional <Picture 8> reference image."
+      },
+      "image_9": {
+        "name": "Picture 9",
+        "tooltip": "Optional <Picture 9> reference image (H3 supports up to 9; batched inputs are expanded sequentially)."
+      },
+      "window_prompts": {
+        "name": "Window prompts",
+        "tooltip": "Optional JSON string array with one prompt per window."
+      },
+      "audio": {
+        "name": "Audio",
+        "tooltip": "Optional locked target soundtrack."
+      },
+      "split_conds": {
+        "name": "Split conditions",
+        "tooltip": "Encode one condition per window; disable for one shared condition (must stay enabled when a long source_video exceeds one window)."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "Positive",
+        "tooltip": "Window-ordered H3 positive conditioning list."
+      },
+      "1": {
+        "name": "Latent",
+        "tooltip": "Empty H3 AV latent, with optional locked audio."
+      },
+      "2": {
+        "name": "Total frames",
+        "tooltip": "Padded H3 total frame count."
+      },
+      "3": {
+        "name": "Context overlap",
+        "tooltip": "Overlap selected for the context-window sampler."
+      },
+      "4": {
+        "name": "Plan JSON",
+        "tooltip": "Complete window plan."
+      }
+    }
+  },
+  "TankH3MaskedSourceLatent": {
+    "display_name": "H3 Masked Source Latent · Tank",
+    "description": "Repaints inside the mask and locks the original source outside it; use for replacing one person per pass in multi-person footage.",
+    "inputs": {
+      "vae": {
+        "name": "Video VAE",
+        "tooltip": "MiniMax H3 video VAE."
+      },
+      "audio_vae": {
+        "name": "Audio VAE",
+        "tooltip": "MiniMax H3 audio VAE."
+      },
+      "images": {
+        "name": "Source frames",
+        "tooltip": "24fps source frames with 17n+5 frame count and dimensions divisible by 16."
+      },
+      "mask": {
+        "name": "Mask",
+        "tooltip": "Region to repaint; one mask per frame or one static mask."
+      },
+      "dilate": {
+        "name": "Spatial dilate",
+        "tooltip": "Pixel dilation applied before latent downsampling."
+      },
+      "invert": {
+        "name": "Invert",
+        "tooltip": "Invert the repaint mask."
+      },
+      "audio": {
+        "name": "Audio",
+        "tooltip": "Optional source soundtrack to lock."
+      },
+      "bbox_expand": {
+        "name": "BBox expand",
+        "tooltip": "Expand each mask bounding box by this fraction."
+      },
+      "protect": {
+        "name": "Protect",
+        "tooltip": "Areas to subtract from the repaint region."
+      },
+      "temporal_dilate": {
+        "name": "Temporal dilate",
+        "tooltip": "Expand the mask forward and backward by this many frames."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "Latent",
+        "tooltip": "H3 AV latent with source video outside the repaint mask and locked audio."
+      },
+      "1": {
+        "name": "Mask preview",
+        "tooltip": "Per-frame pixel-space repaint mask."
       }
     }
   }

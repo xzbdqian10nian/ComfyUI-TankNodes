@@ -1,0 +1,3 @@
+[[tank:h3]]
+[[tank:h3-dh]]
+H3 digital human (talking / singing to camera). One person faces the camera in ONE continuous shot with a fixed camera and one shot scale; the background is taken from the reference picture and never changes; nothing in the hands. With a voice track connected, the voice is reused 1:1 as <Audio 1> and the lips follow it (no invented lines); without one, she speaks the lines quoted in the request.

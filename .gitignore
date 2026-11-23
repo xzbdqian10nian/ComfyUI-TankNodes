@@ -6,3 +6,8 @@ __pycache__/
 .pytest_cache/
 runtime/
 *.part
+# Mirror default API credentials (never commit)
+private/
+.venv/
+.env
+.env.*

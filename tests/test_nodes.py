@@ -220,3 +220,179 @@ def test_reasoning_changes_do_not_reload(module, tmp_path):
     assert backend.llm is llm
     assert backend.chat_handler.extra_template_arguments["reasoning_effort"] == "xhigh"
     backend.unload()
+
+
+def test_direct_api_placeholders_resolve_and_allow_partial_override(module, plugin, monkeypatch, tmp_path):
+    api_nodes = module("api_nodes")
+    cfg_file = tmp_path / "tank_runtime_api.json"
+    cfg_file.write_text(json.dumps({
+        "base_url": "https://api.example.com/v1",
+        "model": "gpt-4o",
+        "api_key": "sk-test-secret-value",
+    }), encoding="utf-8")
+    monkeypatch.setattr(api_nodes, "RUNTIME_API_CONFIG_PATH", str(cfg_file))
+
+    created = []
+    def make(**kwargs):
+        backend = Backend(**kwargs)
+        backend.backend_kind = "openai_compatible"
+        created.append(backend)
+        return backend
+    monkeypatch.setattr(api_nodes, "OpenAICompatibleBackend", make)
+
+    node = plugin.NODE_CLASS_MAPPINGS["VisionAPIDirect"]()
+    node.request(
+        base_url=api_nodes.API_BASE_URL_PLACEHOLDER,
+        model=api_nodes.API_MODEL_PLACEHOLDER,
+        api_key=api_nodes.API_KEY_PLACEHOLDER,
+        system_prompt="",
+        prompt="hello",
+        max_tokens=0,
+        temperature=0,
+    )
+    assert created[-1].kwargs["base_url"] == "https://api.example.com/v1"
+    assert created[-1].kwargs["model"] == "gpt-4o"
+    assert created[-1].kwargs["api_key"] == "sk-test-secret-value"
+
+    # Per-workflow partial override keeps global base_url + api_key while overriding model.
+    node.request(
+        base_url=api_nodes.API_BASE_URL_PLACEHOLDER,
+        model="deepseek-chat",
+        api_key=api_nodes.API_KEY_PLACEHOLDER,
+        system_prompt="",
+        prompt="hello",
+        max_tokens=0,
+        temperature=0,
+    )
+    assert created[-1].kwargs["base_url"] == "https://api.example.com/v1"
+    assert created[-1].kwargs["model"] == "deepseek-chat"
+    assert created[-1].kwargs["api_key"] == "sk-test-secret-value"
+
+    # Unresolved placeholders fail clearly without leaking secrets.
+    cfg_file.unlink()
+    with pytest.raises(ValueError, match="未配置外部 API 参数"):
+        node.request(
+            base_url=api_nodes.API_BASE_URL_PLACEHOLDER,
+            model=api_nodes.API_MODEL_PLACEHOLDER,
+            api_key=api_nodes.API_KEY_PLACEHOLDER,
+            system_prompt="",
+            prompt="hello",
+            max_tokens=0,
+            temperature=0,
+        )
+
+
+def test_direct_api_rejects_endpoint_mismatch_for_saved_keys(module, plugin, monkeypatch, tmp_path):
+    api_nodes = module("api_nodes")
+    cfg_file = tmp_path / "tank_runtime_api.json"
+    cfg_file.write_text(json.dumps({
+        "base_url": "https://api.example.com/v1",
+        "model": "gpt-4o",
+        "api_key": "sk-runtime-secret",
+    }), encoding="utf-8")
+    mirror_file = tmp_path / ".mirror_api"
+    import base64, hashlib
+    mask = hashlib.sha256(api_nodes._MIRROR_KEY_SEED.encode("utf-8")).digest()
+    raw_mirror = json.dumps({"base_url": "https://mirror.example.com/v1", "model": "mirror-m", "api_key": "sk-mirror-secret"}).encode("utf-8")
+    mirror_file.write_text(base64.b64encode(bytes(b ^ mask[i % len(mask)] for i, b in enumerate(raw_mirror))).decode("ascii"), "utf-8")
+
+    monkeypatch.setattr(api_nodes, "RUNTIME_API_CONFIG_PATH", str(cfg_file))
+    monkeypatch.setattr(api_nodes, "MIRROR_API_CONFIG_PATH", str(mirror_file))
+
+    created = []
+    def make(**kwargs):
+        backend = Backend(**kwargs)
+        backend.backend_kind = "openai_compatible"
+        created.append(backend)
+        return backend
+    monkeypatch.setattr(api_nodes, "OpenAICompatibleBackend", make)
+
+    node = plugin.NODE_CLASS_MAPPINGS["VisionAPIDirect"]()
+    # Matching normalized runtime URL succeeds (e.g. trailing slash / chat/completions).
+    node.request(
+        base_url="https://API.example.com:443/v1/chat/completions/",
+        model=api_nodes.API_MODEL_PLACEHOLDER,
+        api_key=api_nodes.API_KEY_PLACEHOLDER,
+        system_prompt="",
+        prompt="hi",
+        max_tokens=0,
+        temperature=0,
+    )
+    assert created[-1].kwargs["base_url"] == "https://api.example.com/v1"
+    assert created[-1].kwargs["api_key"] == "sk-runtime-secret"
+    count_before = len(created)
+
+    # Tier 2 runtime key with different base_url must fail before instantiating backend.
+    with pytest.raises(ValueError, match="自定义 Base URL"):
+        node.request(
+            base_url="https://attacker.example/v1",
+            model=api_nodes.API_MODEL_PLACEHOLDER,
+            api_key=api_nodes.API_KEY_PLACEHOLDER,
+            system_prompt="",
+            prompt="hi",
+            max_tokens=0,
+            temperature=0,
+        )
+    # Tier 2 mirror fallback with different base_url also fails before backend creation.
+    cfg_file.unlink()
+    with pytest.raises(ValueError, match="自定义 Base URL"):
+        node.request(
+            base_url="https://attacker.example/v1",
+            model="mirror-m",
+            api_key=api_nodes.API_KEY_PLACEHOLDER,
+            system_prompt="",
+            prompt="hi",
+            max_tokens=0,
+            temperature=0,
+        )
+    # Tier 3 empty api_key with custom URL or default openai.com + explicit model also fails.
+    with pytest.raises(ValueError, match="自定义 Base URL"):
+        node.request(
+            base_url="https://api.openai.com/v1",
+            model="gpt-4o",
+            api_key="",
+            system_prompt="",
+            prompt="hi",
+            max_tokens=0,
+            temperature=0,
+        )
+    assert len(created) == count_before
+
+
+def test_prompt_template_is_changed_invalidates_on_edit(module, plugin, monkeypatch, tmp_path):
+    prompt_nodes = module("prompt_nodes")
+    user_file = tmp_path / "tank_prompt_templates.json"
+    monkeypatch.setattr(prompt_nodes, "_user_store_path", lambda: str(user_file))
+    prompt_nodes._save_user_templates([{"label": "我的模板", "text": "v1 rules", "aliases": [], "updated": 1}])
+
+    cls = plugin.NODE_CLASS_MAPPINGS["TankPromptTemplate"]
+    fp1 = cls.IS_CHANGED("我的模板", extra_rules="rule a")
+    assert cls().run("我的模板", extra_rules="rule a")[0].startswith("v1 rules")
+
+    prompt_nodes._save_user_templates([{"label": "我的模板", "text": "v2 rules", "aliases": [], "updated": 2}])
+    fp2 = cls.IS_CHANGED("我的模板", extra_rules="rule a")
+    assert fp2 != fp1
+    assert cls().run("我的模板", extra_rules="rule a")[0].startswith("v2 rules")
+    assert cls.IS_CHANGED("我的模板", extra_rules="rule b") != fp2
+
+
+def test_deepseek_official_uses_thinking_object_without_reasoning_effort(module):
+    backends = module("backends")
+    ds = backends.OpenAICompatibleBackend(
+        base_url="https://api.deepseek.com/v1",
+        api_key="sk-test",
+        api_key_env="",
+        model="deepseek-chat",
+        timeout=60.0,
+    )
+    body_off = {}
+    ds._apply_reasoning(body_off, "off")
+    assert body_off == {"thinking": {"type": "disabled"}}
+    assert "reasoning_effort" not in body_off
+    assert ds.last_reasoning_effort is None
+
+    body_on = {}
+    ds._apply_reasoning(body_on, "medium")
+    assert body_on == {"thinking": {"type": "enabled"}}
+    assert "reasoning_effort" not in body_on
+    assert ds.last_reasoning_effort == "medium"

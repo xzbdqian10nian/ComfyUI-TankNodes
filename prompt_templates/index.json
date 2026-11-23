@@ -1,7 +1,50 @@
 [
  {
-  "label": "H3 视频 · 官方格式（自动判断文生/图生/首尾帧/参考）",
-  "file": "h3_official.txt"
+  "label": "H3 视频 · 官方格式（自动判断文生、图生、首尾帧、参考）",
+  "file": "h3_official.txt",
+  "aliases": [
+   "H3 视频 · 官方格式（自动判断文生/图生/首尾帧/参考）"
+  ]
+ },
+ {
+  "label": "H3 视频编辑 · 通用模板（换人、换脸、换装、换道具、换背景、改风格、增删、动作迁移）",
+  "file": "h3_video_edit.txt",
+  "aliases": [
+   "H3 视频编辑 · 通用模板（换人/换脸/换装/换道具/换背景/改风格/增删/动作迁移）"
+  ]
+ },
+ {
+  "label": "H3 视频编辑 · 通用模板（保持参考图画风）",
+  "file": "h3_video_edit_picstyle.txt"
+ },
+ {
+  "label": "H3 MV · 分段提示词（一句话→分镜、运镜、特效，每段独立）",
+  "file": "h3_mv.txt",
+  "aliases": [
+   "H3 MV · 分段提示词（一句话→分镜/运镜/特效，每段独立）"
+  ]
+ },
+ {
+  "label": "人设反推 · 参考图→固定人设句（MV、长视频复用）",
+  "file": "h3_persona.txt",
+  "aliases": [
+   "人设反推 · 参考图→固定人设句（MV/长视频复用）"
+  ]
+ },
+ {
+  "label": "H3 数字人 · 口播、唱歌（单镜头固定机位 · 接音频自动对口型）",
+  "file": "h3_digital_human.txt",
+  "aliases": [
+   "H3 数字人 · 口播/唱歌（单镜头固定机位 · 接音频自动对口型）"
+  ]
+ },
+ {
+  "label": "H3 Image 文生图 · 官方 PE（本地开源模型）",
+  "file": "h3_image_t2i_official.txt"
+ },
+ {
+  "label": "H3 Image 图像编辑 · 官方 PE（本地开源模型）",
+  "file": "h3_image_edit_official.txt"
  },
  {
   "label": "Qwen2.1 文生图 · 官方 PE 规则",

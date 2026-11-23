@@ -65,7 +65,7 @@
       },
       "max_tokens": {
         "name": "最大输出 token 数",
-        "tooltip": "输出 token 数上限。设为 0 表示不发送此参数，使用服务商默认值。"
+        "tooltip": "输出 token 数上限。0 = 不限制，由服务商决定（不发送 max_tokens 参数）。"
       },
       "temperature": {
         "name": "随机度",
@@ -98,6 +98,26 @@
       "video": {
         "name": "视频",
         "tooltip": "ComfyUI VIDEO 输入；通用场景选抽帧，只有服务商支持原生视频时才选 video_url。"
+      },
+      "seconds": {
+        "name": "秒数（H3）",
+        "tooltip": "仅 H3 模板生效：目标时长（秒）。填 0 时编辑任务按源视频长度（其他按 5 秒）。"
+      },
+      "video_role": {
+        "name": "视频用途（H3）",
+        "tooltip": "仅 H3 模板生效：源视频用途（auto 按需求文字判断；非 H3 模板忽略）。"
+      },
+      "video_fps": {
+        "name": "视频帧率（H3）",
+        "tooltip": "仅 H3 模板生效：视频帧率，用于计算切镜时间和原片时长。"
+      },
+      "keep_source_audio": {
+        "name": "保留原声（H3）",
+        "tooltip": "仅 H3 模板生效：编辑任务将原片音轨作为 <Audio 1> fully_copy 保留。"
+      },
+      "source_audio": {
+        "name": "源视频音轨（H3）",
+        "tooltip": "仅 H3 模板生效：可选接入原片音轨以检测是否静音；无声/静音时不生成 <Audio 1> fully_copy。"
       }
     },
     "outputs": {
@@ -149,7 +169,7 @@
       },
       "max_tokens": {
         "name": "最大输出 token 数",
-        "tooltip": "输出 token 数上限。设为 0 表示不发送此参数，使用服务商默认值。"
+        "tooltip": "输出 token 数上限。0 = 不限制，由服务商决定（不发送 max_tokens 参数）。"
       },
       "temperature": {
         "name": "随机度",
@@ -182,6 +202,26 @@
       "video": {
         "name": "视频",
         "tooltip": "ComfyUI VIDEO 输入；通用场景选抽帧，只有服务商支持原生视频时才选 video_url。"
+      },
+      "seconds": {
+        "name": "秒数（H3）",
+        "tooltip": "仅 H3 模板生效：目标时长（秒）。填 0 时编辑任务按源视频长度（其他按 5 秒）。"
+      },
+      "video_role": {
+        "name": "视频用途（H3）",
+        "tooltip": "仅 H3 模板生效：源视频用途（auto 按需求文字判断；非 H3 模板忽略）。"
+      },
+      "video_fps": {
+        "name": "视频帧率（H3）",
+        "tooltip": "仅 H3 模板生效：视频帧率，用于计算切镜时间和原片时长。"
+      },
+      "keep_source_audio": {
+        "name": "保留原声（H3）",
+        "tooltip": "仅 H3 模板生效：编辑任务将原片音轨作为 <Audio 1> fully_copy 保留。"
+      },
+      "source_audio": {
+        "name": "源视频音轨（H3）",
+        "tooltip": "仅 H3 模板生效：可选接入原片音轨以检测是否静音；无声/静音时不生成 <Audio 1> fully_copy。"
       }
     },
     "outputs": {
@@ -453,7 +493,7 @@
       },
       "source_video_role": {
         "name": "源视频用途",
-        "tooltip": "源视频在任务中的作用。"
+        "tooltip": "源视频在任务中的作用；auto 按需求文字判断。"
       },
       "reference_audio_note": {
         "name": "参考音频说明",
@@ -466,6 +506,18 @@
       "context_length": {
         "name": "上下文长度",
         "tooltip": "官方指南加图片大约需要 16–32K。"
+      },
+      "source_video_fps": {
+        "name": "源视频帧率",
+        "tooltip": "源视频帧的帧率，用来算硬切时间。"
+      },
+      "keep_source_audio": {
+        "name": "保留原声",
+        "tooltip": "视频编辑：原片音轨作为最终音频（<Audio 1> fully_copy）。"
+      },
+      "source_audio": {
+        "name": "源视频音轨",
+        "tooltip": "可选接入原片音轨以检测是否静音；无声/静音时不生成 <Audio 1> fully_copy。"
       }
     },
     "outputs": {
@@ -612,11 +664,23 @@
       },
       "video_frames": {
         "name": "视频帧",
-        "tooltip": "源视频的帧，自动抽 8 帧，用于视频编辑或动作参考。"
+        "tooltip": "源视频的帧，用于编辑 / 续拍 / 动作参考。会自动找硬切，每个镜头都给模型看。"
       },
       "video_role": {
         "name": "视频用途",
-        "tooltip": "auto：没接参考图 = 编辑源视频，接了参考图 = 动作参考。视频编辑请选 edit source。"
+        "tooltip": "auto 按需求文字判断：写了替换/换成/去掉 → 编辑原片；写了续拍 → 续拍；写了参考动作/跟着跳 → 动作参考；都没写时，接了参考图按动作参考，没接按编辑。"
+      },
+      "video_fps": {
+        "name": "视频帧率",
+        "tooltip": "视频帧的帧率，用来算硬切时间；时长填 0 时编辑任务按原片长度。"
+      },
+      "keep_source_audio": {
+        "name": "保留原声",
+        "tooltip": "编辑任务：原片音轨作为最终音频（<Audio 1> fully_copy）。"
+      },
+      "source_audio": {
+        "name": "源视频音轨",
+        "tooltip": "可选接入原片音轨以检测是否静音；无声/静音时不生成 <Audio 1> fully_copy。"
       }
     },
     "outputs": {
@@ -675,40 +739,6 @@
       }
     }
   },
-  "TankQwen21PromptEngineering": {
-    "display_name": "Qwen-Image 2.1 提示词工程 · Tank",
-    "description": "输出 Qwen-Image 2.1 官方提示词增强（PE）的系统提示词，接到「本地多模态对话 · Tank」的系统提示上；用户提示词和图片接到对话节点。",
-    "inputs": {
-      "task": {
-        "name": "任务",
-        "tooltip": "文生图（text-to-image）或图像编辑（image edit），对应官方两套 PE 规则。"
-      },
-      "extra_rules": {
-        "name": "附加规则",
-        "tooltip": "可选，追加在官方规则后面。"
-      }
-    },
-    "outputs": {
-      "0": {
-        "name": "系统提示词"
-      }
-    }
-  },
-  "TankMossPromptEngineering": {
-    "display_name": "MOSS 提示词工程 · Tank",
-    "description": "输出 MOSS-Image 官方提示词增强的系统提示词，接到「本地多模态对话 · Tank」的系统提示上。",
-    "inputs": {
-      "extra_rules": {
-        "name": "附加规则",
-        "tooltip": "可选，追加在官方规则后面。"
-      }
-    },
-    "outputs": {
-      "0": {
-        "name": "系统提示词"
-      }
-    }
-  },
   "TankOptionalImageDownscale": {
     "display_name": "参考图缩放（可选输入）· Tank",
     "description": "把图缩放到约 N 百万像素（默认只缩不放）；没接图或加载器被关掉时输出为空，后面的可选参考图输入直接当作没有，不报错。",
@@ -746,22 +776,757 @@
       }
     }
   },
-  "TankFlux3PromptEngineering": {
-    "display_name": "FLUX3 Klein 提示词工程 · Tank",
-    "description": "输出 FLUX 3 Image Klein 官方提示词扩写（upsampler）的系统提示词，接到「本地多模态对话 · Tank」的系统提示上；用户提示词和参考图接到对话节点。",
+  "TankMangaTranslatePrompt": {
+    "display_name": "漫画翻译提示词（VL）· Tank",
+    "description": "生成漫画气泡检测与翻译的系统提示词和用户提示词。",
     "inputs": {
-      "task": {
-        "name": "任务",
-        "tooltip": "文生图（text-to-image）或图像编辑（image edit），对应官方两套扩写规则。"
+      "language": {
+        "name": "目标语言"
       },
-      "extra_rules": {
-        "name": "附加规则",
-        "tooltip": "可选，追加在官方规则后面。"
+      "notes": {
+        "name": "翻译备注"
       }
     },
     "outputs": {
       "0": {
         "name": "系统提示词"
+      },
+      "1": {
+        "name": "用户提示词"
+      }
+    }
+  },
+  "TankMossSwapTextLayout": {
+    "display_name": "MOSS 漫画换字排版 · Tank",
+    "description": "将 VL 气泡识别结果转换为 MOSS swap_text 排版 JSON。",
+    "inputs": {
+      "image": {
+        "name": "图像"
+      },
+      "detections": {
+        "name": "识别结果"
+      },
+      "resolution": {
+        "name": "分辨率"
+      },
+      "coord_mode": {
+        "name": "坐标模式"
+      },
+      "uppercase_english": {
+        "name": "英文大写"
+      },
+      "min_box": {
+        "name": "最小框尺寸"
+      },
+      "merge_columns": {
+        "name": "合并竖排"
+      },
+      "chinese_line_breaks": {
+        "name": "中文自动断行"
+      },
+      "text_box": {
+        "name": "文本框模式"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "排版 JSON"
+      },
+      "1": {
+        "name": "预览图"
+      },
+      "2": {
+        "name": "文本行"
+      }
+    }
+  },
+  "TankMangaCharacterPrompt": {
+    "display_name": "漫画角色定位提示词（VL）· Tank",
+    "description": "生成按角色设定表定位漫画页面人物的 VL 提示词。",
+    "inputs": {
+      "character_sheet": {
+        "name": "角色设定表"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "系统提示词"
+      },
+      "1": {
+        "name": "用户提示词"
+      },
+      "2": {
+        "name": "角色设定表"
+      }
+    }
+  },
+  "TankMossColorizeLayout": {
+    "display_name": "MOSS 按角色上色排版 · Tank",
+    "description": "将角色定位结果转换为 MOSS 按角色上色排版 JSON。",
+    "inputs": {
+      "image": {
+        "name": "图像"
+      },
+      "detections": {
+        "name": "识别结果"
+      },
+      "character_sheet": {
+        "name": "角色设定表"
+      },
+      "base_caption": {
+        "name": "基础描述"
+      },
+      "resolution": {
+        "name": "分辨率"
+      },
+      "add_position": {
+        "name": "附加方位词"
+      },
+      "add_bbox": {
+        "name": "附加边界框"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "排版 JSON"
+      },
+      "1": {
+        "name": "预览图"
+      },
+      "2": {
+        "name": "报告"
+      }
+    }
+  },
+  "TankH3ImagePromptOptimizer": {
+    "display_name": "H3 Image 官方提示词优化 · Tank",
+    "description": "H3 Image 本地多模态官方提示词优化器。",
+    "inputs": {
+      "backend": {
+        "name": "模型配置",
+        "tooltip": "连接 Bonsai / Tank 本地模型；关闭优化时不加载。"
+      },
+      "template": {
+        "name": "模板",
+        "tooltip": "连接 H3 Image 官方模板，与视频模板分开。"
+      },
+      "request": {
+        "name": "用户输入",
+        "tooltip": "原始生图或编辑要求，画面文字和引号按原文保留。"
+      },
+      "enabled": {
+        "name": "启用优化",
+        "tooltip": "关闭后原文直通，不调用或卸载模型。"
+      },
+      "thinking_mode": {
+        "name": "思考强度",
+        "tooltip": "固定使用高强度思考，不自动降档。"
+      },
+      "context_length": {
+        "name": "上下文长度",
+        "tooltip": "文生图推荐 16384；多图编辑至少 32768。"
+      },
+      "max_tokens": {
+        "name": "最大输出 token",
+        "tooltip": "包括思考与最终答案；文生图推荐 4096，编辑至少 10240。"
+      },
+      "correction": {
+        "name": "自我纠错",
+        "tooltip": "返回格式失败时额外重试一次，默认关闭；不检查画面语义。"
+      },
+      "unload_after": {
+        "name": "完成后卸载",
+        "tooltip": "成功或失败后卸载语言模型，为生图释放显存。"
+      },
+      "seed": {
+        "name": "随机种子",
+        "tooltip": "控制提示词优化的随机性，不是生图采样种子。"
+      },
+      "aspect_ratio": {
+        "name": "画幅比例",
+        "tooltip": "连接共享画幅字符串；明确比例优先，自动模式可采用建议或图像比例。"
+      },
+      "reference_image_1": {
+        "name": "参考图 1",
+        "tooltip": "原始参考图 1，只取批次第一张；按接入端口连续编号。"
+      },
+      "reference_image_2": {
+        "name": "参考图 2",
+        "tooltip": "原始参考图 2，只取批次第一张；按接入端口连续编号。"
+      },
+      "reference_image_3": {
+        "name": "参考图 3",
+        "tooltip": "原始参考图 3，只取批次第一张；按接入端口连续编号。"
+      },
+      "reference_image_4": {
+        "name": "参考图 4",
+        "tooltip": "原始参考图 4，只取批次第一张；按接入端口连续编号。"
+      },
+      "reference_image_5": {
+        "name": "参考图 5",
+        "tooltip": "原始参考图 5，只取批次第一张；按接入端口连续编号。"
+      },
+      "reference_image_6": {
+        "name": "参考图 6",
+        "tooltip": "原始参考图 6，只取批次第一张；按接入端口连续编号。"
+      },
+      "reference_image_7": {
+        "name": "参考图 7",
+        "tooltip": "原始参考图 7，只取批次第一张；按接入端口连续编号。"
+      },
+      "reference_image_8": {
+        "name": "参考图 8",
+        "tooltip": "原始参考图 8，只取批次第一张；按接入端口连续编号。"
+      },
+      "reference_image_9": {
+        "name": "参考图 9",
+        "tooltip": "原始参考图 9，只取批次第一张；按接入端口连续编号。"
+      },
+      "reference_image_10": {
+        "name": "参考图 10",
+        "tooltip": "原始参考图 10，只取批次第一张；按接入端口连续编号。"
+      },
+      "reference_image_11": {
+        "name": "参考图 11",
+        "tooltip": "原始参考图 11，只取批次第一张；按接入端口连续编号。"
+      },
+      "reference_image_12": {
+        "name": "参考图 12",
+        "tooltip": "原始参考图 12，只取批次第一张；按接入端口连续编号。"
+      },
+      "reference_image_13": {
+        "name": "参考图 13",
+        "tooltip": "原始参考图 13，只取批次第一张；按接入端口连续编号。"
+      },
+      "reference_image_14": {
+        "name": "参考图 14",
+        "tooltip": "原始参考图 14，只取批次第一张；按接入端口连续编号。"
+      },
+      "reference_image_15": {
+        "name": "参考图 15",
+        "tooltip": "原始参考图 15，只取批次第一张；按接入端口连续编号。"
+      },
+      "reference_image_16": {
+        "name": "参考图 16",
+        "tooltip": "原始参考图 16，只取批次第一张；按接入端口连续编号。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "优化后提示词",
+        "tooltip": "扩写正文，直接接生图提示词，不包含 JSON 包装。"
+      },
+      "1": {
+        "name": "推荐比例",
+        "tooltip": "模型建议的比例，不覆盖用户明确指定的画幅。"
+      },
+      "2": {
+        "name": "诊断 JSON",
+        "tooltip": "原始回复、图片编号、用量、耗时和是否实际优化。"
+      }
+    }
+  },
+  "TankH3ImageSize": {
+    "display_name": "H3 Image 尺寸 · Tank",
+    "description": "按画幅比例与百万像素档位计算 32 对齐宽高。",
+    "inputs": {
+      "aspect_ratio": {
+        "name": "画幅比例",
+        "tooltip": "明确比例优先；自动时依次采用优化建议、参考图比例、1:1。"
+      },
+      "megapixels": {
+        "name": "百万像素（MP）",
+        "tooltip": "面积按 MP × 1024² 计算，宽高分别就近对齐到 32 倍数。"
+      },
+      "recommended_ratio": {
+        "name": "推荐比例",
+        "tooltip": "接优化器建议比例；明确比例或跟随图像时忽略。"
+      },
+      "image": {
+        "name": "参考图",
+        "tooltip": "按原始图像尺寸取得比例，不改变图像。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "宽",
+        "tooltip": "对齐到 32 倍数的输出宽度，单位像素。"
+      },
+      "1": {
+        "name": "高",
+        "tooltip": "对齐到 32 倍数的输出高度，单位像素。"
+      },
+      "2": {
+        "name": "实际比例",
+        "tooltip": "对齐后实际宽高的约分比例。"
+      }
+    }
+  },
+  "TankH3ImageAspect": {
+    "display_name": "H3 Image 画幅 · Tank",
+    "description": "输出画幅比例字符串。",
+    "inputs": {
+      "ratio": {
+        "name": "比例",
+        "tooltip": "同一画幅字符串同时连接优化器与尺寸节点，避免两边比例不一致。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "画幅比例",
+        "tooltip": "选定的画幅字符串；连接字符串输入，不是下拉框数值。"
+      }
+    }
+  },
+  "TankMultiAngleCamera": {
+    "display_name": "3D 多角度相机 · Tank",
+    "description": "内嵌 Three.js 三球拖拽舞台与 10 个快捷机位预设；H3 Image 推荐选 structured_v6 并开启官方 PE，Qwen2.1 挂载 QMA LoRA 时选 qma_lora。",
+    "inputs": {
+      "horizontal_angle": {
+        "name": "水平方位角（°）",
+        "tooltip": "0°=原图机位，90°=移至右侧拍左侧面，180°=正后方反打，270°=移至左侧拍右侧面（步进15°）。"
+      },
+      "vertical_angle": {
+        "name": "垂直俯仰角（°）",
+        "tooltip": "-30°=低机位仰拍，0°=平视，+45°=高机位俯拍，+90°=正上方垂直顶视。"
+      },
+      "shot_scale": {
+        "name": "景别远近",
+        "tooltip": "wide(远景24mm) / medium_wide(中远28mm) / medium(中景35mm) / medium_close_up(中近50mm) / close_up(特写85mm)。"
+      },
+      "prompt_dialect": {
+        "name": "提示词方言",
+        "tooltip": "structured_v6：完整三维几何指令（配 H3 Image + 官方PE 或 GPT-Image）；qma_lora：输出 <qma> 标签（配 Qwen2.1 QMA 多角度 LoRA）；sks_lora：输出 <sks> 标签；concise_edit：精简英文指令。"
+      },
+      "reference_image": {
+        "name": "参考图（可选）",
+        "tooltip": "接入后自动贴在 3D 舞台中心立牌正面实时预览，并从输出口原样透传。"
+      },
+      "extra_style_hint": {
+        "name": "附加说明（可选）",
+        "tooltip": "可选补充画面细节或风格要求。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "正向提示词",
+        "tooltip": "按当前机位和提示词方言生成的视角指令。"
+      },
+      "1": {
+        "name": "负向提示词",
+        "tooltip": "抑制常见视角和构图错误的负向描述。"
+      },
+      "2": {
+        "name": "机位参数 JSON",
+        "tooltip": "水平角、俯仰角、景别和提示词方言的结构化参数。"
+      },
+      "3": {
+        "name": "透传参考图",
+        "tooltip": "原样输出参考图；未接图时输出空白占位图。"
+      }
+    }
+  },
+  "TankPanoramaSetup": {
+    "display_name": "360° 全景构建 · Tank",
+    "description": "文生全景（direct）与单图扩全景（extension）二合一：自动输出严格 2:1 宽高、全景几何提示词、以及 21% 赤道窄视窗预排版画布与余弦羽化遮罩。",
+    "inputs": {
+      "mode": {
+        "name": "全景模式",
+        "tooltip": "auto：未连参考图时走文生全景（direct），连入参考图时自动走单图扩全景（extension）。"
+      },
+      "dialect": {
+        "name": "提示词风格",
+        "tooltip": "structured_equirect（完整球面几何约束，推荐配 H3 Image + 官方PE）、concise_qwen_edit（精简扩图）、flux_skybox_lora（LoRA 触发词）。"
+      },
+      "pano_width": {
+        "name": "全景宽度",
+        "tooltip": "自动对齐 64 并按严格 2:1 输出高度（H3 Image 推荐 2880×1440，Qwen2.1 推荐 2048×1024）。"
+      },
+      "indoor_anti_stretch": {
+        "name": "室内防拉伸净空",
+        "tooltip": "强制镜头周围 2.8–3.5 米地面净空，避免近景沙发茶几贴脸巨型拉伸。"
+      },
+      "anchor_width_ratio": {
+        "name": "参考图赤道占比",
+        "tooltip": "单图扩全景时原图居中占 360° 宽度的比例（默认 0.21 约等于 70° 自然视场角）。"
+      },
+      "feather_px": {
+        "name": "边缘羽化像素",
+        "tooltip": "窄视窗四周余弦平滑过渡宽度。"
+      },
+      "scene_prompt": {
+        "name": "场景描述",
+        "tooltip": "文生全景填场景描述（自动覆盖单向角落构图词并禁止重复克隆主建筑）；图扩全景可留空或补充环境描述。"
+      },
+      "reference_image": {
+        "name": "单张参考图（可选）",
+        "tooltip": "接入任意比例单图即可生成 21% 窄视窗预排版画布。"
+      },
+      "lora_trigger": {
+        "name": "LoRA 触发词",
+        "tooltip": "选用 flux_skybox_lora 方言时的触发词前缀。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "正向提示词",
+        "tooltip": "文生全景或参考图扩全景的场景与球面几何指令。"
+      },
+      "1": {
+        "name": "负向提示词",
+        "tooltip": "抑制重复场景、接缝和全景拉伸的负向描述。"
+      },
+      "2": {
+        "name": "全景宽（2:1）",
+        "tooltip": "对齐到 64 倍数的全景宽度，单位像素。"
+      },
+      "3": {
+        "name": "全景高（2:1）",
+        "tooltip": "全景高度，严格为输出宽度的一半。"
+      },
+      "4": {
+        "name": "21% 预排版画布",
+        "tooltip": "含居中参考图的全景画布；参考图占比由赤道占比控制。"
+      },
+      "5": {
+        "name": "扩图羽化遮罩",
+        "tooltip": "白色区域需要生成，参考图边缘按羽化像素平滑过渡。"
+      }
+    }
+  },
+  "TankPanoramaSeamlessPatch": {
+    "display_name": "360° 全景无缝补丁 · Tank",
+    "description": "仅对水平 X 轴启用 circular 圆柱周期填充、垂直 Y 轴保持 replicate，消除 ±180° 背后竖向接缝且绝不上下串色（兼容 Dynamic VRAM 与量化模型）。",
+    "inputs": {
+      "model": {
+        "name": "模型",
+        "tooltip": "需要水平无缝采样的扩散模型；补丁不修改原模型对象。"
+      },
+      "enable": {
+        "name": "启用无缝补丁",
+        "tooltip": "开启后横向使用循环填充，纵向保持边缘复制；关闭时原样直通。"
+      },
+      "vae": {
+        "name": "VAE（可选）",
+        "tooltip": "可选，给 VAE 同步应用水平无缝卷积补丁。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "模型",
+        "tooltip": "应用水平无缝补丁后的模型；关闭时返回原模型。"
+      },
+      "1": {
+        "name": "VAE",
+        "tooltip": "应用补丁后的 VAE；未接入时为空。"
+      }
+    }
+  },
+  "TankPanoramaViewer": {
+    "display_name": "360° 全景球面预览与切图 · Tank",
+    "description": "节点内直接拖拽环视 360°×180° 球体内壁（含 180° 查接缝快捷按钮），并可同步切出黄金 58° VFOV 无拉伸平直透视分镜图。",
+    "inputs": {
+      "equirect_image": {
+        "name": "2:1 等距柱状全景图",
+        "tooltip": "接入 2:1 等距柱状全景图，用于球面预览和透视切图。"
+      },
+      "default_vfov": {
+        "name": "预览初始垂直视场角（°）",
+        "tooltip": "球面查看器的初始视野大小；不改变切图视场角。"
+      },
+      "slice_preset": {
+        "name": "分镜切图模式",
+        "tooltip": "4_cardinal_views（0°/90°/180°/270° 四向分镜）、12_orbit_views（30°步进12向）、single_custom_view（自定义单机位）、none（仅预览不切图）。"
+      },
+      "slice_vfov": {
+        "name": "切图垂直视场角（°）",
+        "tooltip": "默认黄金 58° 杜绝广角边缘拉伸变形。"
+      },
+      "slice_width": {
+        "name": "切图宽度",
+        "tooltip": "每张透视分镜图的输出宽度，单位像素。"
+      },
+      "slice_height": {
+        "name": "切图高度",
+        "tooltip": "每张透视分镜图的输出高度，单位像素。"
+      },
+      "custom_yaw_deg": {
+        "name": "自定义水平角（°）",
+        "tooltip": "自定义单机位的水平方向；0° 为全景中心，180° 为背面接缝。"
+      },
+      "custom_pitch_deg": {
+        "name": "自定义俯仰角（°）",
+        "tooltip": "自定义单机位的上下方向；正值向上看，负值向下看。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "透传全景原图",
+        "tooltip": "原样输出输入全景图，不经过切图或重采样。"
+      },
+      "1": {
+        "name": "平直分镜切图",
+        "tooltip": "所选机位的平直透视图批次；不切图时返回原图。"
+      }
+    }
+  },
+  "TankImageSize": {
+    "display_name": "尺寸（比例 · 百万像素）· Tank",
+    "description": "按宽高比（或可选输入图像1）和像素面积创建空 Latent，并输出宽高、总像素和实际面积；H3 Image 只接宽高，保留原条件节点。",
+    "inputs": {
+      "aspect_ratio": {
+        "name": "宽高比",
+        "tooltip": "目标宽高比，或选「跟随图像1」沿用可选输入图像比例；对齐后实际比例可能略有变化。"
+      },
+      "megapixels": {
+        "name": "百万像素",
+        "tooltip": "目标像素面积，1M = 1024² 像素；实际尺寸以预览为准。"
+      },
+      "multiple": {
+        "name": "对齐倍数",
+        "tooltip": "宽和高取此数的整数倍，不是把尺寸乘以此数；推荐 32。"
+      },
+      "batch_size": {
+        "name": "批量",
+        "tooltip": "一次生成的空 Latent 图像数量；面积和批量越大，显存占用越高。"
+      },
+      "image": {
+        "name": "图像",
+        "tooltip": "可选参考图像1；仅在宽高比设为「跟随图像1」时读取其尺寸比例。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "潜空间",
+        "tooltip": "通用全零 Latent，连接标准采样器；不要替换编辑、遮罩或 H3 Image 条件节点的 Latent。"
+      },
+      "1": {
+        "name": "宽度",
+        "tooltip": "对齐后的宽度，单位为像素。"
+      },
+      "2": {
+        "name": "高度",
+        "tooltip": "对齐后的高度，单位为像素。"
+      },
+      "3": {
+        "name": "总像素",
+        "tooltip": "单张图片实际总像素数：宽度乘以高度。"
+      },
+      "4": {
+        "name": "实际面积",
+        "tooltip": "对齐后的实际像素面积，按 1024² 像素为 1M 计算。"
+      }
+    }
+  },
+  "TankH3WindowPlan": {
+    "display_name": "H3 窗口规划 · Tank",
+    "description": "计算有效的 MiniMax H3 长视频总帧数、上下文重叠和窗口起点。",
+    "inputs": {
+      "frames_needed": {
+        "name": "需要帧数",
+        "tooltip": "目标输出帧数；H3 会补齐到 17n+5。"
+      },
+      "context_length": {
+        "name": "上下文长度",
+        "tooltip": "H3 窗口长度，必须满足 17n+5。"
+      },
+      "overlap_candidates": {
+        "name": "重叠候选",
+        "tooltip": "按顺序尝试的逗号分隔帧数。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "总帧数",
+        "tooltip": "补齐后的 H3 总帧数。"
+      },
+      "1": {
+        "name": "上下文长度",
+        "tooltip": "连接 MiniMaxH3ContextWindows 的上下文长度。"
+      },
+      "2": {
+        "name": "上下文重叠",
+        "tooltip": "连接 MiniMaxH3ContextWindows 的选定重叠。"
+      },
+      "3": {
+        "name": "窗口起点",
+        "tooltip": "像素帧起点 JSON 数组。"
+      },
+      "4": {
+        "name": "规划 JSON",
+        "tooltip": "包含补帧数和窗口数量的完整规划。"
+      }
+    }
+  },
+  "TankH3WindowedReferenceToVideo": {
+    "display_name": "H3 分窗口参考生视频 · Tank",
+    "description": "按上下文窗口分别编码 H3 参考条件。将重叠输出连接到 MiniMaxH3ContextWindows，通过 H3 窗口规划共享上下文长度，并开启 split_conds_to_windows=True；关闭分拆条件时，下游也应关闭该开关。生成后用 ImageFromBatch 裁回需要帧数。",
+    "inputs": {
+      "clip": {
+        "name": "CLIP",
+        "tooltip": "MiniMax H3 CLIP。"
+      },
+      "vae": {
+        "name": "视频 VAE",
+        "tooltip": "MiniMax H3 视频 VAE。"
+      },
+      "audio_vae": {
+        "name": "音频 VAE",
+        "tooltip": "MiniMax H3 音频 VAE。"
+      },
+      "width": {
+        "name": "宽度",
+        "tooltip": "输出宽度，单位像素。"
+      },
+      "height": {
+        "name": "高度",
+        "tooltip": "输出高度，单位像素。"
+      },
+      "frames_needed": {
+        "name": "需要帧数",
+        "tooltip": "补帧前的目标帧数。"
+      },
+      "context_length": {
+        "name": "上下文长度",
+        "tooltip": "H3 上下文窗口长度。"
+      },
+      "prompt": {
+        "name": "提示词",
+        "tooltip": "参考生成或视频编辑提示词。"
+      },
+      "ref_image_size": {
+        "name": "参考图尺寸",
+        "tooltip": "匹配输出尺寸或适配短边。"
+      },
+      "source_video": {
+        "name": "源视频",
+        "tooltip": "可选源视频帧；各窗口切片作为 <Video 1>。"
+      },
+      "image_1": {
+        "name": "图片 1",
+        "tooltip": "可选 <Picture 1> 参考图。"
+      },
+      "image_2": {
+        "name": "图片 2",
+        "tooltip": "可选 <Picture 2> 参考图。"
+      },
+      "image_3": {
+        "name": "图片 3",
+        "tooltip": "可选 <Picture 3> 参考图。"
+      },
+      "image_4": {
+        "name": "图片 4",
+        "tooltip": "可选 <Picture 4> 参考图。"
+      },
+      "image_5": {
+        "name": "图片 5",
+        "tooltip": "可选 <Picture 5> 参考图。"
+      },
+      "image_6": {
+        "name": "图片 6",
+        "tooltip": "可选 <Picture 6> 参考图。"
+      },
+      "image_7": {
+        "name": "图片 7",
+        "tooltip": "可选 <Picture 7> 参考图。"
+      },
+      "image_8": {
+        "name": "图片 8",
+        "tooltip": "可选 <Picture 8> 参考图。"
+      },
+      "image_9": {
+        "name": "图片 9",
+        "tooltip": "可选 <Picture 9> 参考图（H3 最多 9 张；单口批量输入按顺序拆分为连续图片）。"
+      },
+      "window_prompts": {
+        "name": "窗口提示词",
+        "tooltip": "可选 JSON 字符串数组，每个窗口一项。"
+      },
+      "audio": {
+        "name": "音频",
+        "tooltip": "可选锁定的目标音轨。"
+      },
+      "split_conds": {
+        "name": "分拆条件",
+        "tooltip": "每窗口编码一个条件；关闭后所有窗口共用一个条件（长视频带 source_video 超出单窗时须开启，否则报错防截断）。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "正向条件",
+        "tooltip": "按窗口顺序拼接的 H3 正向条件列表。"
+      },
+      "1": {
+        "name": "潜空间",
+        "tooltip": "空 H3 AV 潜空间，可包含锁定音频。"
+      },
+      "2": {
+        "name": "总帧数",
+        "tooltip": "补齐后的 H3 总帧数。"
+      },
+      "3": {
+        "name": "上下文重叠",
+        "tooltip": "上下文采样器使用的重叠。"
+      },
+      "4": {
+        "name": "规划 JSON",
+        "tooltip": "完整窗口规划。"
+      }
+    }
+  },
+  "TankH3MaskedSourceLatent": {
+    "display_name": "H3 遮罩源潜空间 · Tank",
+    "description": "遮罩内重绘、遮罩外锁定原内容；多人视频换人时每遍只替换一个人。",
+    "inputs": {
+      "vae": {
+        "name": "视频 VAE",
+        "tooltip": "MiniMax H3 视频 VAE。"
+      },
+      "audio_vae": {
+        "name": "音频 VAE",
+        "tooltip": "MiniMax H3 音频 VAE。"
+      },
+      "images": {
+        "name": "源视频帧",
+        "tooltip": "24fps 源视频帧，帧数为 17n+5，尺寸为 16 的倍数。"
+      },
+      "mask": {
+        "name": "遮罩",
+        "tooltip": "要重绘的区域；可逐帧输入或使用单张静态遮罩。"
+      },
+      "dilate": {
+        "name": "空间膨胀",
+        "tooltip": "降采样到潜空间前的像素膨胀。"
+      },
+      "invert": {
+        "name": "反相",
+        "tooltip": "反转重绘遮罩。"
+      },
+      "audio": {
+        "name": "音频",
+        "tooltip": "可选要锁定的源音轨。"
+      },
+      "bbox_expand": {
+        "name": "外接框扩展",
+        "tooltip": "按比例扩大每帧遮罩外接框。"
+      },
+      "protect": {
+        "name": "保护区域",
+        "tooltip": "从重绘区域中扣除的区域。"
+      },
+      "temporal_dilate": {
+        "name": "时间膨胀",
+        "tooltip": "沿时间前后扩展遮罩的帧数。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "潜空间",
+        "tooltip": "遮罩外保留源视频、音频锁定的 H3 AV 潜空间。"
+      },
+      "1": {
+        "name": "遮罩预览",
+        "tooltip": "逐帧像素空间重绘遮罩。"
       }
     }
   }

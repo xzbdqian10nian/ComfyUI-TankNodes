@@ -25,18 +25,28 @@ async function post(path, body) {
   const r = await api.fetchApi(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const data = await r.json();
   if (!r.ok || data.error) throw new Error(data.error || `HTTP ${r.status}`);
-  return data.templates || [];
+  return { templates: data.templates || [], saved: data.saved || null };
+}
+
+// ComfyUI's dropdown turns "/" into nested sub-menus, so template names never contain it; old names (aliases) map to the new ones.
+const menuSafe = (label) => String(label ?? "").trim().replace(/\s*[/／]\s*/g, "、");
+let known = [];
+function canonical(value, templates = known) {
+  const hit = templates.find(t => t.label === value) || templates.find(t => (t.aliases || []).includes(value))
+    || templates.find(t => menuSafe(t.label) === menuSafe(value));
+  return hit ? hit.label : null;
 }
 
 // Push the new label list into every template node's dropdown (and optionally select a label on one node).
 function refreshNodes(templates, node, select) {
+  known = templates;
   const labels = templates.map(t => t.label);
   for (const n of app.graph?._nodes || []) {
     if (n.comfyClass !== "TankPromptTemplate" && n.type !== "TankPromptTemplate") continue;
     const w = n.widgets?.find(x => x.name === "template");
     if (!w) continue;
     w.options.values = labels;
-    if (!labels.includes(w.value)) w.value = labels[0];
+    if (!labels.includes(w.value)) w.value = canonical(w.value, templates) || labels[0];
   }
   if (node && select) {
     const w = node.widgets?.find(x => x.name === "template");
@@ -56,7 +66,8 @@ async function openManager(node) {
   const t = L();
   let templates = await fetchTemplates();
   const cur = node.widgets?.find(x => x.name === "template")?.value;
-  let sel = templates.find(x => x.label === cur) || templates[0];
+  const curLabel = canonical(cur, templates);
+  let sel = templates.find(x => x.label === curLabel) || templates[0];
   let editingNew = false;
 
   const btn = (label, onclick, primary) => el("button", { onclick, style: { padding: "6px 12px", borderRadius: "8px", border: "1px solid #555",
@@ -69,15 +80,18 @@ async function openManager(node) {
   const msg = el("span", { style: { fontSize: "12px", color: "#9c9", marginLeft: "8px" } });
   const delBtn = btn(t.del, async () => {
     if (!sel || sel.builtin || editingNew || !confirm(t.confirmDel)) return;
-    try { templates = await post("/tank/prompt_templates/delete", { label: sel.label }); sel = templates[0]; refreshNodes(templates); paint(); }
+    try { ({ templates } = await post("/tank/prompt_templates/delete", { label: sel.label })); sel = templates[0]; refreshNodes(templates); paint(); }
     catch (e) { msg.style.color = "#e88"; msg.textContent = e.message; }
   });
   const saveBtn = btn(t.save, async () => {
     const label = nameIn.value.trim(); if (!label) { msg.style.color = "#e88"; msg.textContent = t.needName; return; }
     msg.style.color = "#aab"; msg.textContent = t.saving; saveBtn.disabled = true;
     try {
-      templates = await post("/tank/prompt_templates", { label, text: text.value, old_label: (!editingNew && sel && !sel.builtin) ? sel.label : "" });
-      sel = templates.find(x => x.label === label); editingNew = false; refreshNodes(templates, node, label);
+      const res = await post("/tank/prompt_templates", { label, text: text.value, old_label: (!editingNew && sel && !sel.builtin) ? sel.label : "" });
+      templates = res.templates;
+      const savedLabel = res.saved || canonical(menuSafe(label), templates) || menuSafe(label);   // 后端会把「/」换成「、」
+      sel = templates.find(x => x.label === savedLabel) || templates[0]; editingNew = false;
+      refreshNodes(templates, node, sel?.label);
       msg.style.color = "#9c9"; msg.textContent = t.saved; paint();
     } catch (e) { msg.style.color = "#e88"; msg.textContent = e.message; }
     finally { saveBtn.disabled = false; }
@@ -132,6 +146,19 @@ app.registerExtension({
       const r = created?.apply(this, arguments);
       const w = this.addWidget("button", L().button, null, () => openManager(this), { serialize: false });
       if (w) w.serialize = false;  // not part of widgets_values: keeps old workflows' template / extra_rules order intact
+      const tw = this.widgets?.find(x => x.name === "template");
+      if (tw && known.length) tw.options.values = known.map(t => t.label);   // 新建的节点也用最新的模板列表
+      return r;
+    };
+    const configure = nodeType.prototype.onConfigure;
+    nodeType.prototype.onConfigure = function () {
+      const r = configure?.apply(this, arguments);
+      const w = this.widgets?.find(x => x.name === "template");
+      if (w && known.length) {
+        w.options.values = known.map(t => t.label);          // 后加载的节点也用最新的模板列表
+        const label = canonical(w.value);
+        if (label && label !== w.value) w.value = label;       // 老工作流里的旧模板名 → 现名
+      }
       return r;
     };
   },
